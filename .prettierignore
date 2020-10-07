@@ -1,0 +1,7 @@
+*.log
+.history
+.DS_Store
+.build
+coverage
+dist
+package-lock.json

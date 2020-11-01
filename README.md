@@ -29,7 +29,7 @@ $ npm i vuelve
 
 Before we start, let's have a look at an example that uses the canonical Composition API. The following example is taken from the [Composition API Introduction in Vue.js documentation](https://v3.vuejs.org/guide/composition-api-introduction.html).
 
-`useUserRepositories.vue` (The composable)
+`useUserRepositories.js` (The composable)
 
 ```js
 import { fetchUserRepositories } from '@/api/repositories'

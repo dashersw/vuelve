@@ -1,4 +1,4 @@
-import { ref, defineComponent, nextTick, onErrorCaptured } from 'vue'
+import { ref, defineComponent, nextTick } from 'vue'
 import { mount, renderToString } from '@vue/test-utils'
 import vuelve from '../src'
 

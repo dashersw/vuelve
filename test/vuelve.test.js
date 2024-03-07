@@ -172,42 +172,50 @@ describe('vuelve', () => {
     wrapper.unmount()
     expect(deactivatedSpy).toHaveBeenCalled()
   })
-  /*
-  it('captures errors using onErrorCaptured', async () => {
-    const consoleSpy = jest.spyOn(console, 'log')
-    const wrapper = mount(ErrorThrower)
 
-    await wrapper.find('button').trigger('click')
-
-    expect(consoleSpy).toHaveBeenCalledWith('Error captured:', 'Test error')
-    consoleSpy.mockRestore() // Clean up the spy to avoid side effects
-  })*/
-  /*
-  it('should catch errors and logs and send them to snackbar', async () => {
-    // Mock the snackbar or logging function
-    const logError = jest.fn()
-    // Assume `useSnackbar` is a function that returns an object with a `logError` method
-    // This could be a Vue composable, a Vuex action, etc.
-    const vComposable = {
-      errorCaptured: logError,
-      returns: {}
+  it('implements errorCaptured', async () => {
+    const lifecycleHookCallbacks = {
+      errorCapturedFn: function (err, vm, info) {},
     }
-    vComposable.returns.errorCapturedFn = logError
 
-    // Setup the component, which should throw an error during setup
-    const errorComponent = defineComponent({
+    const vComposable = {
+      errorCaptured: lifecycleHookCallbacks.errorCapturedFn,
+      returns: {
+        ...lifecycleHookCallbacks,
+      },
+    }
+
+    const errorCapturedSpy = jest.spyOn(vComposable.returns, 'errorCapturedFn')
+
+    const ChildComponent = defineComponent({
+      name: 'ChildComponent',
+      template: `<p>Error Component</p>`,
       setup() {
-        onErrorCaptured(vComposable.returns.errorCapturedFn)
-        throw new Error('error message')
+        throw new Error('Test error')
       },
     })
 
-    // Mount the component - this should trigger the error and the error handling
-    mount(errorComponent)
+    const parentComponent = defineComponent({
+      name: 'ParentComponent',
+      template: `
+        <KeepAlive>
+          <child-component />
+        </KeepAlive>
+      `,
+      components: {
+        ChildComponent,
+      },
+      setup() {
+        vuelve(vComposable)()
+      },
+    })
 
-    // Assert that the error was logged or sent to the snackbar
-    expect(logError).toHaveBeenCalledWith(expect.any(Error))
-  })*/
+    expect(() => {
+      mount(parentComponent)
+    }).toThrow()
+
+    expect(errorCapturedSpy).toHaveBeenCalled()
+  })
 
   it('implements erverPrefetch', async () => {
     function composable() {

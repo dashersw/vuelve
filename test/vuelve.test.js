@@ -217,7 +217,7 @@ describe('vuelve', () => {
     expect(errorCapturedSpy).toHaveBeenCalled()
   })
 
-  it('implements erverPrefetch', async () => {
+  it('implements serverPrefetch', async () => {
     function composable() {
       const val = ref(0)
 

@@ -3,17 +3,9 @@
   "env": {
     "node": true
   },
-  "extends": [
-    "airbnb",
-    "prettier",
-    "prettier/@typescript-eslint",
-    "prettier/babel",
-    "prettier/flowtype",
-    "prettier/react",
-    "prettier/standard",
-    "prettier/unicorn",
-    "prettier/vue"
-  ],
+  "parser": "@typescript-eslint/parser",
+  "plugins": ["@typescript-eslint"],
+  "extends": ["airbnb", "prettier", "plugin:@typescript-eslint/recommended"],
   "globals": {
     "vue": "readonly"
   },
@@ -23,7 +15,7 @@
   },
   "overrides": [
     {
-      "files": ["test/**/*.js"],
+      "files": ["test/**/*.ts"],
       "env": {
         "jest": true
       }

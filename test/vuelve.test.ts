@@ -1,32 +1,32 @@
-import { ref, defineComponent, nextTick } from 'vue'
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { ref, defineComponent, nextTick, Ref } from 'vue'
 import { mount } from '@vue/test-utils'
-import vuelve from '../src'
+import vuelve from '../src/index.ts'
 
 describe('vuelve', () => {
   it('implements computed, mounted, watch, watchEffect', async () => {
     function composable() {
-      const val = ref(0)
-
+      const val: Ref<number> = ref(0)
       return { val }
     }
 
-    const watchedValue = ref(0)
-    const watchEffectValue = ref(0)
-    const mountedValue = ref(0)
+    const watchedValue: Ref<number> = ref(0)
+    const watchEffectValue: Ref<number> = ref(0)
+    const mountedValue: Ref<number> = ref(0)
 
-    function computedVal() {
+    function computedVal(this: any): number {
       return this.val.value + 1
     }
 
-    function mountedFn() {
+    function mountedFn(this: any): void {
       this.mountedValue.value = this.val.value + 6
     }
 
-    function watchFn() {
+    function watchFn(this: any): void {
       this.watchedValue.value = this.val.value + 2
     }
 
-    function watchEffectFn() {
+    function watchEffectFn(this: any): void {
       this.watchEffectValue.value = this.val.value + 4
     }
 
@@ -78,7 +78,7 @@ describe('vuelve', () => {
   })
 
   it('implements module pattern', () => {
-    const val = ref('hello')
+    const val: Ref<string> = ref('hello')
 
     const composable = {
       default: {},

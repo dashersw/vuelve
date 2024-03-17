@@ -1,4 +1,3 @@
-/* eslint-disable import/no-extraneous-dependencies */
 import { defineConfig } from 'vite'
 import dts from 'vite-plugin-dts'
 
@@ -16,13 +15,12 @@ export default defineConfig({
   ],
   build: {
     lib: {
-      entry: 'src/index.ts',
+      entry: 'src/index.js',
       name: 'vuelve',
       formats: ['es', 'cjs', 'umd'],
       fileName: format => `vuelve.${FORMAT_MAP[format]}.js`,
     },
     rollupOptions: {
-      external: ['vue', 'lodash.clonedeep'],
       output: {
         globals: {
           vue: 'Vue',

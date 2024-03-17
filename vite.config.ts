@@ -1,3 +1,4 @@
+/* eslint-disable import/no-extraneous-dependencies */
 import { defineConfig } from 'vite'
 import dts from 'vite-plugin-dts'
 
@@ -15,7 +16,7 @@ export default defineConfig({
   ],
   build: {
     lib: {
-      entry: 'src/index.js',
+      entry: 'src/index.ts',
       name: 'vuelve',
       formats: ['es', 'cjs', 'umd'],
       fileName: format => `vuelve.${FORMAT_MAP[format]}.js`,

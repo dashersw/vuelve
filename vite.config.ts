@@ -22,6 +22,7 @@ export default defineConfig({
       fileName: format => `vuelve.${FORMAT_MAP[format]}.js`,
     },
     rollupOptions: {
+      external: ['vue', 'lodash.clonedeep'],
       output: {
         globals: {
           vue: 'Vue',

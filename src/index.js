@@ -31,77 +31,64 @@ const vue3LifecycleHooks = {
   serverPrefetch: onServerPrefetch,
 }
 
-export default function vuelve(composable, obj) {
-  let localObj = obj
-  let localComposable = composable
-
-  if (!localObj && !localComposable.returns) {
-    localObj = localComposable
-    localComposable = localComposable.default
-  } else {
-    localObj = localObj || localComposable.returns
-  }
-
-  const exports = Object.keys(localObj)
-
-  const variables = {}
-  const methods = {}
-  const computeds = {}
-
+export default function vuelve(composable) {
   return function setup(...args) {
+    const variables = {}
+    const methods = {}
+    const computeds = {}
+
+    const context = {}
     args.forEach((arg, i) => {
-      variables[localComposable.props[i]] = arg
+      variables[composable.props[i]] = arg
     })
 
-    Object.keys(localObj).forEach(key => {
-      if (key == 'default') return
-
-      // bind context variables to methods
-      if (typeof localObj[key] === 'function') {
-        methods[key] = localObj[key].bind(variables)
-      }
-      // clone data variables
-      else variables[key] = ref(cloneDeep(localObj[key]))
+    Object.keys(composable.data).forEach(key => {
+      variables[key] = ref(cloneDeep(composable.data[key]))
     })
+
+    Object.assign(context, variables)
+
+    if (composable.methods)
+      Object.keys(composable.methods).forEach(key => {
+        methods[key] = (...methodArgs) => composable.methods[key].apply(context, methodArgs)
+      })
+
+    Object.assign(context, methods)
 
     Object.keys(vue3LifecycleHooks).forEach(lifecycleHook => {
-      if (localComposable[lifecycleHook]) {
+      if (composable[lifecycleHook]) {
         const vue3LifecycleHook = vue3LifecycleHooks[lifecycleHook]
 
-        if (vue3LifecycleHook && methods[localComposable[lifecycleHook].name]) {
-          vue3LifecycleHook(methods[localComposable[lifecycleHook].name])
+        if (vue3LifecycleHook && composable[composable[lifecycleHook].name]) {
+          vue3LifecycleHook((...lifecycleArgs) =>
+            composable[composable[lifecycleHook].name].apply(context, lifecycleArgs)
+          )
         }
       }
     })
 
-    if (localComposable.watch) {
-      Object.entries(localComposable.watch).forEach(([key, value]) => {
-        watch(variables[key], methods[value.name])
+    if (composable.watch) {
+      Object.entries(composable.watch).forEach(([key, value]) => {
+        watch(variables[key], value)
       })
     }
 
-    if (localComposable.watchEffect) {
-      Object.values(localComposable.watchEffect).forEach(value => {
-        watchEffect(methods[value.name])
+    if (composable.watchEffect) {
+      Object.values(composable.watchEffect).forEach(value => {
+        watchEffect(value.bind(context))
       })
     }
 
-    if (localComposable.computed) {
-      Object.keys(localComposable.computed).forEach(key => {
-        computeds[key] = computed(methods[key])
+    if (composable.computed) {
+      Object.keys(composable.computed).forEach(key => {
+        computeds[key] = computed(composable.computed[key].bind(context))
       })
     }
 
-    const returns = {}
-
-    exports.forEach(key => {
-      if (key == 'default') return
-
-      if (key in variables) returns[key] = variables[key]
-      if (key in methods) returns[key] = methods[key]
-      if (key in computeds) returns[key] = computeds[key]
-    })
-
-    return returns
+    return {
+      ...variables,
+      ...methods,
+      ...computeds,
+    }
   }
 }

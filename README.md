@@ -7,7 +7,7 @@
 [![GitHub license](https://img.shields.io/badge/license-MIT-blue.svg)](https://raw.githubusercontent.com/dashersw/vuelve/main/LICENSE)
 [![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fdashersw%2Fvuelve.svg?type=shield)](https://app.fossa.io/projects/git%2Bgithub.com%2Fdashersw%2Fvuelve?ref=badge_shield)
 
-Vuelve allows you to create declarative composables in Vue 3.
+Vuelve enables the creation of declarative composables in Vue 3, offering a smooth transition for Vue 2 codebases by emulating the Options API.
 
 ## Motivation
 
@@ -27,184 +27,74 @@ $ npm i vuelve
 
 ## Usage
 
-Before we start, let's have a look at an example that uses the canonical Composition API. The following example is taken from the [Composition API Introduction in Vue.js documentation](https://v3.vuejs.org/guide/composition-api-introduction.html).
+Let's explore transitioning from the Composition API to a more declarative approach using Vuelve, using a simple useMouse composable from the [Composables guide in Vue.js documentation](https://vuejs.org/guide/reusability/composables) as our starting point.
 
-`useUserRepositories.js` (The composable)
+### Original Composition API Example:
+
+The mouse.js composable tracks mouse movements.
+
+`mouse.js` (The composable)
 
 ```js
-import { fetchUserRepositories } from '@/api/repositories'
-import { ref, onMounted, watch } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 
-export default function useUserRepositories(user) {
-  const repositories = ref([])
-  const getUserRepositories = async () => {
-    repositories.value = await fetchUserRepositories(user.value)
+export default function useMouse() {
+  const x = ref(0)
+  const y = ref(0)
+
+  function update(event) {
+    x.value = event.pageX
+    y.value = event.pageY
   }
 
-  onMounted(getUserRepositories)
-  watch(user, getUserRepositories)
+  onMounted(() => window.addEventListener('mousemove', update))
+  onUnmounted(() => window.removeEventListener('mousemove', update))
 
-  return {
-    repositories,
-    getUserRepositories,
-  }
+  return { x, y }
 }
 ```
 
-`UserRepositories.vue` (The component that uses the composable)
+Used in `MouseTracker.vue` to display the mouse position:
 
-```js
-import useUserRepositories from './useUserRepositories'
-import { toRefs } from 'vue'
+```html
+<script setup>
+import useMouse from './mouse.js'
 
-export default {
-  props: { user: String },
-  setup(props) {
-    const { user } = toRefs(props)
+const { x, y } = useMouse()
+</script>
 
-    const { repositories, getUserRepositories } = useUserRepositories(user)
-
-    return { repositories }
-  },
-}
+<template>Mouse position is at: {{ x }}, {{ y }}</template>
 ```
 
-Now let's see how we can improve this imperative, single-scope code in the composable.
+### Transforming with Vuelve:
 
-`useUserRepositories.js`
+Transform mouse.js into a declarative composable, improving maintainability and readability.
 
-```js
-import { fetchUserRepositories } from '@/api/repositories'
-
-// use the native export syntax instead of returning variables
-export const repositories = []
-// exported variables are automatically converted to refs, so no need to explicitly declare refs
-
-export async function getUserRepositories() {
-  // access props and exported variables on the this object
-  this.repositories.value = await fetchUserRepositories(user.value)
-}
-
-export default {
-  props: ['user'], // declare your parameters as props
-  mounted: getUserRepositories, // easily declare your lifecycle hooks
-  watch: {
-    user: getUserRepositories,
-  },
-}
-```
-
-Here we make use of the `export` keyword instead of arbitrary return statements, and we have real scope in the module where we clearly differentiate between the variables and functions we export, local variables, reactive variables, and lifecycle hooks. Notice how we didn't have to pollute our application logic with imperative lifecycle calls, but were able to separate them. Also notice that our composable is now free of its Vue dependency and is a plain JavaScript file. Theoretically, this allows us to easily migrate this composable to another environment.
-
-Now let's have a look at how we can use this in our component.
-
-`UserRepositories.vue`
-
-```js
-// import Vuelve in your component
-import vuelve from 'vuelve'
-// import the composable using the "* as" syntax
-import { * as useUserRepositories } from './useUserRepositories'
-import { toRefs } from 'vue'
-
-export default {
-  props: { user: String },
-  setup() {
-    const { user } = toRefs(props)
-
-    // use Vuelve on the composable
-    const { repositories, getUserRepositories } = vuelve(useUserRepositories)(user)
-
-    return { repositories }
-  }
-}
-```
-
-Here you can see that we had to slightly change how we import our composable and how we convert it back to the regular Composition API with Vuelve.
-
-One might want to hide the complexity of importing and using Vuelve in one's components, and might want to prefer to tuck this complexity inside the composable. This approach also has the added benefit of being a drop-in replacement for the Composition API.
-
-In order to allow this, Vuelve supports two additional syntaxes. In the future we wish to settle on one syntax, but before that we'd like to see which syntax the community adopts.
-
-### Syntax 2
-
-`useUserRepositories.js`
+`mouse.js`
 
 ```js
 import vuelve from 'vuelve'
-
-import { fetchUserRepositories } from '@/api/repositories'
-
-// declare the variable locally
-const repositories = []
-
-async function getUserRepositories() {
-  // access props and returned variables on the this object
-  this.repositories.value = await fetchUserRepositories(user.value)
-}
 
 export default vuelve({
-  props: ['user'], // declare your parameters as props
-  mounted: getUserRepositories, // easily declare your lifecycle hooks
-  watch: {
-    user: getUserRepositories,
+  data: { x: 0, y: 0 },
+  methods: {
+    update(event) {
+      this.x.value = event.pageX
+      this.y.value = event.pageY
+    },
   },
-  returns: { repositories, getUserRepositories }, // define your returns declaratively
+  mounted() {
+    window.addEventListener('mousemove', this.update)
+  },
+  unmounted() {
+    window.removeEventListener('mousemove', this.update)
+  },
 })
 ```
 
-`UserRepositories.vue`
+This transformation retains the functionality while adopting a more intuitive, Vue 2-like syntax. It facilitates a smoother development experience, particularly in larger applications where the clarity and separation of concerns offered by declarative programming can significantly reduce complexity.
 
-```js
-import useUserRepositories from './useUserRepositories'
-import { toRefs } from 'vue'
-
-export default {
-  props: { user: String },
-  setup(props) {
-    const { user } = toRefs(props)
-
-    const { repositories, getUserRepositories } = useUserRepositories(user)
-
-    return { repositories }
-  },
-}
-```
-
-As you can see, `UserRepositories.vue` is exactly the same as the original version that uses the composable made with Composition API. In this case, Vuelve composables are a drop-in replacement.
-
-If you don't prefer `returns` keyword in your composables, Vuelve supports a third syntax:
-
-### Syntax 3
-
-`useUserRepositories.js`
-
-```js
-import vuelve from 'vuelve'
-
-import { fetchUserRepositories } from '@/api/repositories'
-
-// declare the variable locally
-const repositories = []
-
-async function getUserRepositories() {
-  // access props and returned variables on the this object
-  this.repositories.value = await fetchUserRepositories(user.value)
-}
-
-export default vuelve(
-  {
-    props: ['user'], // declare your parameters as props
-    mounted: getUserRepositories, // easily declare your lifecycle hooks
-    watch: {
-      user: getUserRepositories,
-    },
-  },
-  { repositories, getUserRepositories } // define your returns declaratively)
-)
-```
-
-Notice here that the returns object is passed as the second parameter to Vuelve.
+Since this is a drop-in replacement, the component that uses this composable will remain the same.
 
 ## Future work
 

@@ -1,5 +1,35 @@
-import { ref, onMounted, watch, computed, watchEffect } from 'vue'
+import {
+  ref,
+  watch,
+  computed,
+  watchEffect,
+  onMounted,
+  onBeforeUpdate,
+  onUpdated,
+  onBeforeUnmount,
+  onUnmounted,
+  onErrorCaptured,
+  onRenderTracked,
+  onRenderTriggered,
+  onActivated,
+  onDeactivated,
+  onServerPrefetch,
+} from 'vue'
 import cloneDeep from 'lodash.clonedeep'
+
+const vue3LifecycleHooks = {
+  mounted: onMounted,
+  beforeUpdate: onBeforeUpdate,
+  updated: onUpdated,
+  beforeUnmount: onBeforeUnmount,
+  unmounted: onUnmounted,
+  errorCaptured: onErrorCaptured,
+  renderTracked: onRenderTracked,
+  renderTriggered: onRenderTriggered,
+  activated: onActivated,
+  deactivated: onDeactivated,
+  serverPrefetch: onServerPrefetch,
+}
 
 export default function vuelve(composable, obj) {
   let localObj = obj
@@ -34,9 +64,15 @@ export default function vuelve(composable, obj) {
       else variables[key] = ref(cloneDeep(localObj[key]))
     })
 
-    if (localComposable.mounted) {
-      onMounted(methods[localComposable.mounted.name])
-    }
+    Object.keys(vue3LifecycleHooks).forEach(lifecycleHook => {
+      if (localComposable[lifecycleHook]) {
+        const vue3LifecycleHook = vue3LifecycleHooks[lifecycleHook]
+
+        if (vue3LifecycleHook && methods[localComposable[lifecycleHook].name]) {
+          vue3LifecycleHook(methods[localComposable[lifecycleHook].name])
+        }
+      }
+    })
 
     if (localComposable.watch) {
       Object.entries(localComposable.watch).forEach(([key, value]) => {

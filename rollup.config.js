@@ -30,7 +30,7 @@ export default [
       },
     },
     external,
-    plugins: [resolve(), commonjs(), buble()],
+    plugins: [resolve(), commonjs(), buble({ objectAssign: 'Object.assign' })],
   },
   {
     input,
@@ -43,7 +43,7 @@ export default [
       },
     },
     external,
-    plugins: [resolve(), commonjs(), buble(), uglify()],
+    plugins: [resolve(), commonjs(), buble({ objectAssign: 'Object.assign' }), uglify()],
   },
   {
     input,
@@ -53,6 +53,6 @@ export default [
       banner,
     },
     external: esExternal,
-    plugins: [buble()],
+    plugins: [buble({ objectAssign: 'Object.assign' })],
   },
 ]

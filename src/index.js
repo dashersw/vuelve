@@ -68,7 +68,7 @@ export default function vuelve(composable, obj) {
       if (localComposable[lifecycleHook]) {
         const vue3LifecycleHook = vue3LifecycleHooks[lifecycleHook]
 
-        if (vue3LifecycleHook) {
+        if (vue3LifecycleHook && methods[localComposable[lifecycleHook].name]) {
           vue3LifecycleHook(methods[localComposable[lifecycleHook].name])
         }
       }

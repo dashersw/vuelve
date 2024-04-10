@@ -124,6 +124,40 @@ describe('vuelve', () => {
     expect(renderTrackedSpy).toHaveBeenCalled()
   })
 
+  it('check unexpected conditions for lifecycle hooks like not assigned function in returns', async () => {
+    function composable() {
+      const val = ref(0)
+
+      return { val }
+    }
+
+    const mountedFn = jest.fn()
+
+    const vComposable = {
+      props: ['val'],
+      mounted: mountedFn,
+      returns: {},
+    }
+
+    const component = defineComponent({
+      name: 'Test',
+      template: `
+        <div></div>
+        `,
+      setup() {
+        const { val } = composable()
+
+        vuelve(vComposable)(val)
+
+        return { val }
+      },
+    })
+
+    mount(component)
+    await nextTick()
+    expect(mountedFn).not.toHaveBeenCalled()
+  })
+
   it('implements activated, deactivated', async () => {
     const lifecycleHookCallbacks = {
       activatedFn: function () {},

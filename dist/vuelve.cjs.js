@@ -2,7 +2,7 @@
  * vuelve
  * A declarative syntax for the Composition API in Vue 3.
  * git+https://github.com/dashersw/vuelve.git
- * v0.1.0
+ * v1.0.0
  * MIT License
  */
 
@@ -1769,78 +1769,92 @@
 	module.exports = cloneDeep;
 	});
 
-	function vuelve(composable, obj) {
-	  var localObj = obj;
-	  var localComposable = composable;
+	var vue3LifecycleHooks = {
+	  mounted: vue.onMounted,
+	  beforeUpdate: vue.onBeforeUpdate,
+	  updated: vue.onUpdated,
+	  beforeUnmount: vue.onBeforeUnmount,
+	  unmounted: vue.onUnmounted,
+	  errorCaptured: vue.onErrorCaptured,
+	  renderTracked: vue.onRenderTracked,
+	  renderTriggered: vue.onRenderTriggered,
+	  activated: vue.onActivated,
+	  deactivated: vue.onDeactivated,
+	  serverPrefetch: vue.onServerPrefetch,
+	};
 
-	  if (!localObj && !localComposable.returns) {
-	    localObj = localComposable;
-	    localComposable = localComposable.default;
-	  } else {
-	    localObj = localObj || localComposable.returns;
-	  }
-
-	  var exports = Object.keys(localObj);
-
-	  var variables = {};
-	  var methods = {};
-	  var computeds = {};
-
+	function vuelve(composable) {
 	  return function setup() {
 	    var args = [], len = arguments.length;
 	    while ( len-- ) args[ len ] = arguments[ len ];
 
+	    var variables = {};
+	    var methods = {};
+	    var computeds = {};
+
+	    var context = {};
 	    args.forEach(function (arg, i) {
-	      variables[localComposable.props[i]] = arg;
+	      variables[composable.props[i]] = arg;
 	    });
 
-	    Object.keys(localObj).forEach(function (key) {
-	      if (key == 'default') { return }
+	    Object.keys(composable.data).forEach(function (key) {
+	      variables[key] = vue.ref(lodash_clonedeep(composable.data[key]));
+	    });
 
-	      // bind context variables to methods
-	      if (typeof localObj[key] === 'function') {
-	        methods[key] = localObj[key].bind(variables);
+	    Object.assign(context, variables);
+
+	    if (composable.methods)
+	      { Object.keys(composable.methods).forEach(function (key) {
+	        methods[key] = function () {
+	          var methodArgs = [], len = arguments.length;
+	          while ( len-- ) methodArgs[ len ] = arguments[ len ];
+
+	          return composable.methods[key].apply(context, methodArgs);
+	        };
+	      }); }
+
+	    Object.assign(context, methods);
+
+	    Object.keys(vue3LifecycleHooks).forEach(function (lifecycleHook) {
+	      if (composable[lifecycleHook]) {
+	        var vue3LifecycleHook = vue3LifecycleHooks[lifecycleHook];
+
+	        if (vue3LifecycleHook && composable[composable[lifecycleHook].name]) {
+	          vue3LifecycleHook(function () {
+	              var lifecycleArgs = [], len = arguments.length;
+	              while ( len-- ) lifecycleArgs[ len ] = arguments[ len ];
+
+	              return composable[composable[lifecycleHook].name].apply(context, lifecycleArgs);
+	          }
+	          );
+	        }
 	      }
-	      // clone data variables
-	      else { variables[key] = vue.ref(lodash_clonedeep(localObj[key])); }
 	    });
 
-	    if (localComposable.mounted) {
-	      vue.onMounted(methods[localComposable.mounted.name]);
-	    }
-
-	    if (localComposable.watch) {
-	      Object.entries(localComposable.watch).forEach(function (ref) {
+	    if (composable.watch) {
+	      Object.entries(composable.watch).forEach(function (ref) {
 	        var key = ref[0];
 	        var value = ref[1];
 
-	        vue.watch(variables[key], methods[value.name]);
+	        vue.watch(variables[key], value);
 	      });
 	    }
 
-	    if (localComposable.watchEffect) {
-	      Object.values(localComposable.watchEffect).forEach(function (value) {
-	        vue.watchEffect(methods[value.name]);
+	    if (composable.watchEffect) {
+	      Object.values(composable.watchEffect).forEach(function (value) {
+	        vue.watchEffect(value.bind(context));
 	      });
 	    }
 
-	    if (localComposable.computed) {
-	      Object.keys(localComposable.computed).forEach(function (key) {
-	        computeds[key] = vue.computed(methods[key]);
+	    if (composable.computed) {
+	      Object.keys(composable.computed).forEach(function (key) {
+	        computeds[key] = vue.computed(composable.computed[key].bind(context));
 	      });
 	    }
 
-	    var returns = {};
-
-	    exports.forEach(function (key) {
-	      if (key == 'default') { return }
-
-	      if (key in variables) { returns[key] = variables[key]; }
-	      if (key in methods) { returns[key] = methods[key]; }
-	      if (key in computeds) { returns[key] = computeds[key]; }
-	    });
-
-	    return returns
+	    return Object.assign({}, variables,
+	      methods,
+	      computeds)
 	  }
 	}
 

@@ -1,7 +1,7 @@
 {
   "name": "vuelve",
   "description": "A declarative syntax for the Composition API in Vue 3.",
-  "version": "0.2.1",
+  "version": "1.0.0",
   "main": "dist/vuelve.cjs.js",
   "module": "dist/vuelve.esm.js",
   "license": "MIT",

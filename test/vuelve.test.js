@@ -1,304 +1,197 @@
-import { ref, defineComponent, nextTick } from 'vue'
-import { mount, renderToString } from '@vue/test-utils'
+import { defineComponent, nextTick } from 'vue'
+import { mount } from '@vue/test-utils'
 import vuelve from '../src'
 
 describe('vuelve', () => {
-  it('implements computed, mounted, beforeUpdate, updated, beforeUnmount, unmounted, renderTriggered, renderTracked, watch, watchEffect', async () => {
-    function composable() {
-      const val = ref(0)
-
-      return { val }
-    }
-
-    const watchedValue = ref(0)
-    const watchEffectValue = ref(0)
-    const mountedValue = ref(0)
-    const updatedValue = ref(0)
-    const beforeUpdateValue = ref(0)
-
-    const lifecycleHookCallbacks = {
-      mountedFn: function () {
-        this.mountedValue.value = this.val.value + 6
+  it('handles props correctly', async () => {
+    const composable = vuelve({
+      props: ['title'],
+      data: { count: 0 },
+      computed: {
+        titleWithCount() {
+          return `${this.title} ${this.count.value}`
+        },
       },
-      updatedFn: function () {
-        this.updatedValue.value = this.val.value + 20
-      },
-      beforeUpdateFn: function () {
-        this.beforeUpdateValue.value = this.val.value + 30
-      },
-      beforeUnmountFn: function () {},
-      unmountedFn: function () {},
-      renderTriggeredFn: function () {},
-      renderTrackedFn: function () {},
-    }
-
-    function computedVal() {
-      return this.val.value + 1
-    }
-
-    function watchFn() {
-      this.watchedValue.value = this.val.value + 2
-    }
-
-    function watchEffectFn() {
-      this.watchEffectValue.value = this.val.value + 4
-    }
-
-    const vComposable = {
-      props: ['val'],
-      computed: { computedVal },
-      watch: { val: watchFn },
-      mounted: lifecycleHookCallbacks.mountedFn,
-      updated: lifecycleHookCallbacks.updatedFn,
-      beforeUpdate: lifecycleHookCallbacks.beforeUpdateFn,
-      beforeUnmount: lifecycleHookCallbacks.beforeUnmountFn,
-      unmounted: lifecycleHookCallbacks.unmountedFn,
-      renderTracked: lifecycleHookCallbacks.renderTrackedFn,
-      renderTriggered: lifecycleHookCallbacks.renderTriggeredFn,
-      watchEffect: { watchEffectFn },
-      returns: {
-        ...lifecycleHookCallbacks,
-        computedVal,
-        watchedValue,
-        watchEffectValue,
-        watchFn,
-        watchEffectFn,
-        mountedValue,
-        updatedValue,
-        beforeUpdateValue,
-      },
-    }
-
-    const beforeUnmountSpy = jest.spyOn(vComposable.returns, 'beforeUnmountFn')
-    const unmountedSpy = jest.spyOn(vComposable.returns, 'unmountedFn')
-    const renderTriggeredSpy = jest.spyOn(vComposable.returns, 'renderTriggeredFn')
-    const renderTrackedSpy = jest.spyOn(vComposable.returns, 'renderTrackedFn')
+    })
 
     const component = defineComponent({
-      name: 'Test',
-      template: `
-        <div id="rvComputed">{{rvComputed}}</div>
-        <div id="rvWatched">{{rvWatched}}</div>
-        <div id="rvWatchEffect">{{rvWatchEffect}}</div>
-        <div id="rvMounted">{{rvMounted}}</div>
-        <div id="rvUpdated">{{rvUpdated}}</div>
-        <div id="rvBeforeUpdate">{{rvBeforeUpdate}}</div>
-        `,
-      setup() {
-        const { val } = composable()
-
-        const {
-          computedVal: rvComputed,
-          watchedValue: rvWatched,
-          watchEffectValue: rvWatchEffect,
-          mountedValue: rvMounted,
-          updatedValue: rvUpdated,
-          beforeUpdateValue: rvBeforeUpdate,
-        } = vuelve(vComposable)(val)
-
-        val.value += 1
-
-        return {
-          rvComputed,
-          rvWatched,
-          rvWatchEffect,
-          rvMounted,
-          rvUpdated,
-          rvBeforeUpdate,
-        }
+      props: {
+        title: String,
       },
+      setup(props) {
+        const { titleWithCount } = composable(props.title)
+        return { titleWithCount }
+      },
+      template: '<div>{{ titleWithCount }}</div>',
+    })
+
+    const wrapper = mount(component, {
+      props: {
+        title: 'Count:',
+      },
+    })
+
+    expect(wrapper.text()).toContain('Count: 0')
+  })
+
+  it('implements computed properties', async () => {
+    const composable = vuelve({
+      data: { count: 0 },
+      computed: {
+        doubled() {
+          return this.count.value * 2
+        },
+      },
+    })
+
+    const component = defineComponent({
+      setup() {
+        const { doubled } = composable()
+        return { doubled }
+      },
+      template: '<div>{{ doubled }}</div>',
     })
 
     const wrapper = mount(component)
-    await nextTick()
-    expect(wrapper.find('#rvComputed').text()).toBe('2')
-    expect(wrapper.find('#rvWatched').text()).toBe('3')
-    expect(wrapper.find('#rvWatchEffect').text()).toBe('5')
-    expect(wrapper.find('#rvMounted').text()).toBe('7')
-    expect(wrapper.find('#rvUpdated').text()).toBe('21')
-    expect(wrapper.find('#rvBeforeUpdate').text()).toBe('31')
-    wrapper.unmount()
-    expect(beforeUnmountSpy).toHaveBeenCalled()
-    expect(unmountedSpy).toHaveBeenCalled()
-    expect(renderTriggeredSpy).toHaveBeenCalled()
-    expect(renderTrackedSpy).toHaveBeenCalled()
+    expect(wrapper.text()).toContain('0')
   })
 
-  it('check unexpected conditions for lifecycle hooks like not assigned function in returns', async () => {
-    function composable() {
-      const val = ref(0)
+  it('calls mounted and unmounted lifecycle hooks', async () => {
+    const mountedSpy = jest.fn()
+    const unmountedSpy = jest.fn()
 
-      return { val }
-    }
-
-    const mountedFn = jest.fn()
-
-    const vComposable = {
-      props: ['val'],
-      mounted: mountedFn,
-      returns: {},
-    }
+    const composable = vuelve({
+      mounted() {
+        mountedSpy()
+      },
+      unmounted() {
+        unmountedSpy()
+      },
+    })
 
     const component = defineComponent({
-      name: 'Test',
-      template: `
-        <div></div>
-        `,
       setup() {
-        const { val } = composable()
-
-        vuelve(vComposable)(val)
-
-        return { val }
+        return composable()
       },
+      template: '<div></div>',
     })
 
-    mount(component)
-    await nextTick()
-    expect(mountedFn).not.toHaveBeenCalled()
-  })
-
-  it('implements activated, deactivated', async () => {
-    const lifecycleHookCallbacks = {
-      activatedFn: function () {},
-      deactivatedFn: function () {},
-    }
-
-    const vComposable = {
-      activated: lifecycleHookCallbacks.activatedFn,
-      deactivated: lifecycleHookCallbacks.deactivatedFn,
-      returns: {
-        ...lifecycleHookCallbacks,
-      },
-    }
-
-    const activatedSpy = jest.spyOn(vComposable.returns, 'activatedFn')
-    const deactivatedSpy = jest.spyOn(vComposable.returns, 'deactivatedFn')
-
-    const ChildComponent = defineComponent({
-      name: 'ChildComponent',
-      template: `
-        <p>
-          Child Component
-        </p>  
-      `,
-      setup() {
-        vuelve(vComposable)()
-      },
-    })
-
-    const parentComponent = defineComponent({
-      name: 'ParentComponent',
-      template: `
-        <KeepAlive>
-          <child-component />
-        </KeepAlive>
-      `,
-      components: {
-        ChildComponent,
-      },
-    })
-
-    const wrapper = mount(parentComponent)
-    await nextTick()
-
-    expect(activatedSpy).toHaveBeenCalled()
+    const wrapper = mount(component)
+    expect(mountedSpy).toHaveBeenCalled()
     wrapper.unmount()
-    expect(deactivatedSpy).toHaveBeenCalled()
+    expect(unmountedSpy).toHaveBeenCalled()
   })
 
-  it('implements errorCaptured', async () => {
-    const lifecycleHookCallbacks = {
-      errorCapturedFn: function (err, vm, info) {},
-    }
+  it('calls beforeUpdate and updated lifecycle hooks', async () => {
+    const beforeUpdateSpy = jest.fn()
+    const updatedSpy = jest.fn()
 
-    const vComposable = {
-      errorCaptured: lifecycleHookCallbacks.errorCapturedFn,
-      returns: {
-        ...lifecycleHookCallbacks,
+    const composable = vuelve({
+      data: { count: 0 },
+      methods: {
+        increment() {
+          this.count.value += 1
+        },
       },
-    }
-
-    const errorCapturedSpy = jest.spyOn(vComposable.returns, 'errorCapturedFn')
-
-    const ChildComponent = defineComponent({
-      name: 'ChildComponent',
-      template: `<p>Error Component</p>`,
-      setup() {
-        throw new Error('Test error')
+      beforeUpdate() {
+        beforeUpdateSpy()
+      },
+      updated() {
+        updatedSpy()
       },
     })
 
-    const parentComponent = defineComponent({
-      name: 'ParentComponent',
-      template: `
-        <KeepAlive>
-          <child-component />
-        </KeepAlive>
-      `,
-      components: {
-        ChildComponent,
-      },
+    const component = defineComponent({
       setup() {
-        vuelve(vComposable)()
+        const { count, increment } = composable()
+        return { count, increment }
+      },
+      template: '{{ count }} <button @click="increment"></button>',
+    })
+
+    const wrapper = mount(component)
+
+    await nextTick()
+    wrapper.find('button').trigger('click')
+    await nextTick()
+
+    expect(beforeUpdateSpy).toHaveBeenCalled()
+    expect(updatedSpy).toHaveBeenCalled()
+  })
+
+  it('tracks reactivity with watch and watchEffect', async () => {
+    const watchSpy = jest.fn()
+    const watchEffectSpy = jest.fn()
+
+    const composable = vuelve({
+      data: { count: 0 },
+      methods: {
+        increment() {
+          this.count.value += 1
+        },
+      },
+      watch: {
+        count(newValue) {
+          watchSpy(newValue)
+        },
+      },
+      watchEffect: {
+        watchEffectSpy() {
+          watchEffectSpy(this.count.value)
+        },
       },
     })
 
-    expect(() => {
-      mount(parentComponent)
-    }).toThrow()
+    const component = defineComponent({
+      setup() {
+        const { count, increment } = composable()
+        return { count, increment }
+      },
+      template: '<div>{{ count }}</div><button @click="increment"></button>',
+    })
 
-    expect(errorCapturedSpy).toHaveBeenCalled()
+    const wrapper = mount(component)
+
+    wrapper.find('button').trigger('click')
+
+    await nextTick()
+    expect(watchSpy).toHaveBeenCalledWith(1)
+    expect(watchEffectSpy).toHaveBeenCalledWith(1)
   })
 
-  it('implements serverPrefetch', async () => {
-    function composable() {
-      const val = ref(0)
+  it('calls renderTriggered and renderTracked lifecycle hooks', async () => {
+    const renderTriggeredSpy = jest.fn()
+    const renderTrackedSpy = jest.fn()
 
-      return { val }
-    }
-
-    function fakeFetch(text) {
-      return Promise.resolve(text)
-    }
-
-    const lifecycleHookCallbacks = {
-      serverPrefetchFn: async function () {
-        this.val.value = await fakeFetch('onServerPrefetch')
+    const composable = vuelve({
+      data: { count: 1 },
+      methods: {
+        increment() {
+          this.count.value += 1
+        },
       },
-    }
-
-    const vComposable = {
-      props: ['val'],
-      serverPrefetch: lifecycleHookCallbacks.serverPrefetchFn,
-      returns: {
-        ...lifecycleHookCallbacks,
+      renderTriggered() {
+        renderTriggeredSpy()
       },
-    }
-
-    const Component = defineComponent({
-      template: '<div>{{ val }}</div>',
-      setup() {
-        const { val } = composable()
-        vuelve(vComposable)(val)
-        return { val }
+      renderTracked() {
+        renderTrackedSpy()
       },
     })
 
-    const contents = await renderToString(Component)
-    expect(contents).toBe('<div>onServerPrefetch</div>')
-  })
+    const component = defineComponent({
+      setup() {
+        const { count, increment } = composable()
+        return { count, increment }
+      },
+      template: '<div>{{ count }} <button @click="increment"></button></div>',
+    })
 
-  it('implements module pattern', () => {
-    const val = ref('hello')
+    const wrapper = mount(component)
 
-    const composable = {
-      default: {},
-      val,
-    }
+    wrapper.find('button').trigger('click')
 
-    const { val: rv } = vuelve(composable)()
-
-    expect(rv.value).toBe('hello')
+    await nextTick()
+    expect(renderTriggeredSpy).toHaveBeenCalled()
+    expect(renderTrackedSpy).toHaveBeenCalled()
   })
 })

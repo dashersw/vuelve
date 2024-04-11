@@ -1,4 +1,5 @@
-import vuelve from '../../../../src/index'
+// eslint-disable-next-line import/no-relative-packages
+import vuelve from "../../../../src/index.ts"
 
 export default vuelve({
   data: { x: 0, y: 0 },

@@ -104,7 +104,7 @@ export default function vuelve<T extends Composable>(composable: T): (...args: a
     if (composable.watch) {
       Object.entries(composable.watch).forEach(([key, value]) => {
         if (variables[key]) {
-          watch(variables[key] as readonly (object | WatchSource<unknown>)[], value)
+          watch(variables[key] as readonly (object | WatchSource<unknown>)[], value.bind(context))
         }
       })
     }

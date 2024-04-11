@@ -1,6 +1,7 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { defineComponent, nextTick } from 'vue'
 import { mount } from '@vue/test-utils'
-import vuelve from '../src'
+import vuelve from '../src/index.ts'
 
 describe('vuelve', () => {
   it('handles props correctly', async () => {
@@ -8,7 +9,7 @@ describe('vuelve', () => {
       props: ['title'],
       data: { count: 0 },
       computed: {
-        titleWithCount() {
+        titleWithCount(this: any) {
           return `${this.title} ${this.count.value}`
         },
       },
@@ -38,7 +39,7 @@ describe('vuelve', () => {
     const composable = vuelve({
       data: { count: 0 },
       computed: {
-        doubled() {
+        doubled(this: any) {
           return this.count.value * 2
         },
       },
@@ -89,7 +90,7 @@ describe('vuelve', () => {
     const composable = vuelve({
       data: { count: 0 },
       methods: {
-        increment() {
+        increment(this: any) {
           this.count.value += 1
         },
       },
@@ -104,7 +105,7 @@ describe('vuelve', () => {
     const component = defineComponent({
       setup() {
         const { count, increment } = composable()
-        return { count, increment }
+        return { count, increment } as Record<string, any>
       },
       template: '{{ count }} <button @click="increment"></button>',
     })
@@ -126,7 +127,7 @@ describe('vuelve', () => {
     const composable = vuelve({
       data: { count: 0 },
       methods: {
-        increment() {
+        increment(this: any) {
           this.count.value += 1
         },
       },
@@ -136,7 +137,7 @@ describe('vuelve', () => {
         },
       },
       watchEffect: {
-        watchEffectSpy() {
+        watchEffectSpy(this: any) {
           watchEffectSpy(this.count.value)
         },
       },
@@ -145,7 +146,7 @@ describe('vuelve', () => {
     const component = defineComponent({
       setup() {
         const { count, increment } = composable()
-        return { count, increment }
+        return { count, increment } as Record<string, any>
       },
       template: '<div>{{ count }}</div><button @click="increment"></button>',
     })
@@ -166,7 +167,7 @@ describe('vuelve', () => {
     const composable = vuelve({
       data: { count: 1 },
       methods: {
-        increment() {
+        increment(this: any) {
           this.count.value += 1
         },
       },
@@ -181,7 +182,7 @@ describe('vuelve', () => {
     const component = defineComponent({
       setup() {
         const { count, increment } = composable()
-        return { count, increment }
+        return { count, increment } as Record<string, any>
       },
       template: '<div>{{ count }} <button @click="increment"></button></div>',
     })

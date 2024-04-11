@@ -1,98 +1,50 @@
-/*
- * vuelve
- * A declarative syntax for the Composition API in Vue 3.
- * git+https://github.com/dashersw/vuelve.git
- * v1.1.0
- * MIT License
- */
-
-import { ref, watch, watchEffect, computed, onMounted, onBeforeUpdate, onUpdated, onBeforeUnmount, onUnmounted, onErrorCaptured, onRenderTracked, onRenderTriggered, onActivated, onDeactivated, onServerPrefetch } from 'vue';
-import cloneDeep from 'lodash.clonedeep';
-
-var vue3LifecycleHooks = {
-  mounted: onMounted,
-  beforeUpdate: onBeforeUpdate,
-  updated: onUpdated,
-  beforeUnmount: onBeforeUnmount,
-  unmounted: onUnmounted,
-  errorCaptured: onErrorCaptured,
-  renderTracked: onRenderTracked,
-  renderTriggered: onRenderTriggered,
-  activated: onActivated,
-  deactivated: onDeactivated,
-  serverPrefetch: onServerPrefetch,
+import { ref as h, watch as s, watchEffect as p, computed as v, onMounted as E, onBeforeUpdate as m, onUpdated as j, onBeforeUnmount as O, onUnmounted as g, onErrorCaptured as w, onRenderTracked as U, onRenderTriggered as y, onActivated as T, onDeactivated as k, onServerPrefetch as C } from "vue";
+import b from "lodash.clonedeep";
+const x = {
+  mounted: E,
+  beforeUpdate: m,
+  updated: j,
+  beforeUnmount: O,
+  unmounted: g,
+  errorCaptured: w,
+  renderTracked: U,
+  renderTriggered: y,
+  activated: T,
+  deactivated: k,
+  serverPrefetch: C
 };
-
-function vuelve(composable) {
-  return function setup() {
-    var args = [], len = arguments.length;
-    while ( len-- ) args[ len ] = arguments[ len ];
-
-    var variables = {};
-    var methods = {};
-    var computeds = {};
-
-    var context = {};
-    args.forEach(function (arg, i) {
-      variables[composable.props[i]] = arg;
-    });
-
-    Object.keys(composable.data || {}).forEach(function (key) {
-      variables[key] = ref(cloneDeep(composable.data[key]));
-    });
-
-    Object.assign(context, variables);
-
-    if (composable.methods)
-      { Object.keys(composable.methods).forEach(function (key) {
-        methods[key] = function () {
-          var methodArgs = [], len = arguments.length;
-          while ( len-- ) methodArgs[ len ] = arguments[ len ];
-
-          return composable.methods[key].apply(context, methodArgs);
-        };
-      }); }
-
-    Object.assign(context, methods);
-
-    Object.keys(vue3LifecycleHooks).forEach(function (lifecycleHook) {
-      if (composable[lifecycleHook]) {
-        var vue3LifecycleHook = vue3LifecycleHooks[lifecycleHook];
-
-        vue3LifecycleHook(function () {
-          var lifecycleArgs = [], len = arguments.length;
-          while ( len-- ) lifecycleArgs[ len ] = arguments[ len ];
-
-          return composable[lifecycleHook].apply(context, lifecycleArgs);
-        });
+function H(t) {
+  return function(...i) {
+    const c = {}, f = {}, a = {}, o = {};
+    return i.forEach((e, n) => {
+      var d;
+      const r = (d = t.props) == null ? void 0 : d[n];
+      r && (c[r] = e);
+    }), t.data && Object.entries(t.data).forEach(([e, n]) => {
+      c[e] = h(b(n));
+    }), Object.assign(o, c), t.methods && Object.entries(t.methods).forEach(([e, n]) => {
+      f[e] = (...r) => n.apply(o, r);
+    }), Object.assign(o, f), Object.entries(x).forEach(([e, n]) => {
+      const r = e;
+      if (t[r]) {
+        const d = t[r];
+        n((...u) => d.apply(o, u));
       }
-    });
-
-    if (composable.watch) {
-      Object.entries(composable.watch).forEach(function (ref) {
-        var key = ref[0];
-        var value = ref[1];
-
-        watch(variables[key], value);
-      });
-    }
-
-    if (composable.watchEffect) {
-      Object.values(composable.watchEffect).forEach(function (value) {
-        watchEffect(value.bind(context));
-      });
-    }
-
-    if (composable.computed) {
-      Object.keys(composable.computed).forEach(function (key) {
-        computeds[key] = computed(composable.computed[key].bind(context));
-      });
-    }
-
-    return Object.assign({}, variables,
-      methods,
-      computeds)
-  }
+    }), t.watch && Object.entries(t.watch).forEach(([e, n]) => {
+      c[e] && s(c[e], n);
+    }), t.watchEffect && Object.values(t.watchEffect).forEach((e) => {
+      p(e.bind(o));
+    }), t.computed && Object.keys(t.computed).forEach((e) => {
+      var r;
+      const n = (r = t.computed) == null ? void 0 : r[e];
+      n && (a[e] = v(n.bind(o)));
+    }), {
+      ...c,
+      ...f,
+      ...a
+    };
+  };
 }
-
-export default vuelve;
+export {
+  H as default
+};

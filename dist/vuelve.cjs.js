@@ -2,7 +2,7 @@
  * vuelve
  * A declarative syntax for the Composition API in Vue 3.
  * git+https://github.com/dashersw/vuelve.git
- * v1.0.0
+ * v1.1.0
  * MIT License
  */
 
@@ -1797,7 +1797,7 @@
 	      variables[composable.props[i]] = arg;
 	    });
 
-	    Object.keys(composable.data).forEach(function (key) {
+	    Object.keys(composable.data || {}).forEach(function (key) {
 	      variables[key] = vue.ref(lodash_clonedeep(composable.data[key]));
 	    });
 
@@ -1819,15 +1819,12 @@
 	      if (composable[lifecycleHook]) {
 	        var vue3LifecycleHook = vue3LifecycleHooks[lifecycleHook];
 
-	        if (vue3LifecycleHook && composable[composable[lifecycleHook].name]) {
-	          vue3LifecycleHook(function () {
-	              var lifecycleArgs = [], len = arguments.length;
-	              while ( len-- ) lifecycleArgs[ len ] = arguments[ len ];
+	        vue3LifecycleHook(function () {
+	          var lifecycleArgs = [], len = arguments.length;
+	          while ( len-- ) lifecycleArgs[ len ] = arguments[ len ];
 
-	              return composable[composable[lifecycleHook].name].apply(context, lifecycleArgs);
-	          }
-	          );
-	        }
+	          return composable[lifecycleHook].apply(context, lifecycleArgs);
+	        });
 	      }
 	    });
 

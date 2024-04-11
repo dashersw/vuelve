@@ -9,7 +9,6 @@ const FORMAT_MAP = {
 }
 
 export default defineConfig({
-  publicDir: 'examples/mouse-control',
   plugins: [
     dts({
       insertTypesEntry: true,

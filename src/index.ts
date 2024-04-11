@@ -1,3 +1,6 @@
+/* eslint-disable no-console */
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/ban-types */
 import {
   ref,
   watch,
@@ -38,95 +41,92 @@ const vue3LifecycleHooks = {
 }
 
 export type Composable = {
-  // get type of vue lifecycle hooks with user arguments generic
-  [key in keyof typeof vue3LifecycleHooks]?: (typeof vue3LifecycleHooks)[key] extends (fn: infer U) => void ? U : never
+  [K in keyof typeof vue3LifecycleHooks]?: (this: Composable, ...args: any[]) => any
 } & {
   props?: string[]
+  data?: Record<string, unknown>
+  methods?: Record<string, (...args: any[]) => any>
   computed?: Record<string, ComputedGetter<unknown>>
   watch?: Record<string, WatchCallback<readonly (object | WatchSource<unknown>)[]>>
   watchEffect?: Record<string, WatchEffect>
-  returns?: Record<string, unknown>
-  default?: Composable
 }
 
-type ExtractReturnType<T extends Composable, U = void> = U extends void
-  ? T['returns'] extends object
-    ? T['returns']
-    : T
-  : U
+type ComposableReturn<T extends Composable> = {
+  [P in keyof T['data']]?: Ref<T['data'][P]>
+} & {
+  [P in keyof T['methods']]: T['methods'][P]
+} & {
+  [P in keyof T['computed']]: ComputedRef<(...args: any[]) => any>
+}
 
-export default function vuelve<T extends Composable, U = void>(composable: T, obj?: U) {
-  const localObj = obj ?? composable.returns ?? composable
-  const localComposable = obj ? composable : composable.default ?? composable
+export default function vuelve<T extends Composable>(composable: T): (...args: any[]) => ComposableReturn<T> {
+  return function setup(...args: any[]) {
+    const variables = {} as Record<string, unknown>
+    const methods = {} as Record<string, () => unknown>
+    const computeds = {} as Record<string, ComputedRef<unknown>>
 
-  const exports = Object.keys(localObj)
+    const context = {}
 
-  const variables: Record<string, Ref> = {}
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const methods: Record<string, () => any> = {}
-  const computeds: Record<string, ComputedRef> = {}
-
-  return function setup<V extends Ref[]>(...args: V) {
     args.forEach((arg, i) => {
-      if (localComposable.props) {
-        variables[localComposable.props[i]] = arg
+      const propName = composable?.props?.[i] ?? undefined
+
+      if (propName) {
+        variables[propName] = arg
       }
     })
 
-    Object.entries(localObj).forEach(([key, value]) => {
-      if (key == 'default') return
+    if (composable.data) {
+      Object.entries(composable.data).forEach(([key, value]) => {
+        variables[key] = ref(cloneDeep(value))
+      })
+    }
 
-      // bind context variables to methods
-      if (typeof value === 'function') {
-        methods[key] = value.bind(variables)
+    Object.assign(context, variables)
+
+    if (composable.methods) {
+      Object.entries(composable.methods).forEach(([key, value]) => {
+        methods[key] = (...methodArgs: any[]) => value.apply(context, methodArgs)
+      })
+    }
+
+    Object.assign(context, methods)
+
+    Object.entries(vue3LifecycleHooks).forEach(([lifecycleHookName, vue3LifecycleHook]) => {
+      const lifecycleHookNameKey = lifecycleHookName as keyof Composable
+
+      if (composable[lifecycleHookNameKey]) {
+        const composableFunction = composable[lifecycleHookNameKey] as Function
+        vue3LifecycleHook((...lifecycleArgs: any[]) => composableFunction.apply(context, lifecycleArgs))
       }
-      // clone data variables
-      else variables[key] = ref(cloneDeep(value))
     })
 
-    Object.entries(vue3LifecycleHooks).forEach(([lifecycleHook, vueHookMethod]) => {
-      const vue3LifecycleHookName = lifecycleHook as keyof typeof vue3LifecycleHooks
-      const hasLocalComposableLifecycleHook = localComposable[vue3LifecycleHookName]
-
-      if (hasLocalComposableLifecycleHook) {
-        const lifecycleMethodName = localComposable[vue3LifecycleHookName]?.name
-
-        if (!lifecycleMethodName) return
-
-        if (vueHookMethod && methods[lifecycleMethodName]) {
-          vueHookMethod(methods[lifecycleMethodName])
+    if (composable.watch) {
+      Object.entries(composable.watch).forEach(([key, value]) => {
+        if (!variables[key]) {
+          console.error(`Watched variable ${key} not found in data`)
+          return
         }
-      }
-    })
-
-    if (localComposable.watch) {
-      Object.entries(localComposable.watch).forEach(([key, value]) => {
-        if (!variables[key]) return
-        watch(variables[key], methods[value.name])
+        watch(variables[key] as readonly (object | WatchSource<unknown>)[], value)
       })
     }
 
-    if (localComposable.watchEffect) {
-      Object.values(localComposable.watchEffect).forEach(value => {
-        watchEffect(methods[value.name])
+    if (composable.watchEffect) {
+      Object.values(composable.watchEffect).forEach(value => {
+        watchEffect(value.bind(context))
       })
     }
 
-    if (localComposable.computed) {
-      Object.keys(localComposable.computed).forEach(key => {
-        computeds[key] = computed(methods[key])
+    if (composable.computed) {
+      Object.keys(composable.computed).forEach(key => {
+        const composableComputedFunction = composable.computed?.[key]
+        if (!composableComputedFunction) return
+        computeds[key] = computed(composableComputedFunction.bind(context))
       })
     }
-
-    const returns = {} as Record<string, Ref | ComputedRef | (() => unknown)>
-    exports.forEach(key => {
-      if (key == 'default') return
-
-      if (key in variables) returns[key] = variables[key]
-      if (key in methods) returns[key] = methods[key]
-      if (key in computeds) returns[key] = computeds[key]
-    })
-
-    return returns as ExtractReturnType<T, U>
+    return {
+      ...variables,
+      ...methods,
+      ...computeds,
+    } as ComposableReturn<T>
   }
 }

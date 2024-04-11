@@ -42,7 +42,7 @@ export default function vuelve(composable) {
       variables[composable.props[i]] = arg
     })
 
-    Object.keys(composable.data).forEach(key => {
+    Object.keys(composable.data || {}).forEach(key => {
       variables[key] = ref(cloneDeep(composable.data[key]))
     })
 

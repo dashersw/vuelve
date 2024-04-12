@@ -9,7 +9,7 @@ describe('vuelve', () => {
       props: ['title'],
       data: { count: 0 },
       computed: {
-        titleWithCount(this: any) {
+        titleWithCount() {
           return `${this.title} ${this.count.value}`
         },
       },
@@ -39,8 +39,8 @@ describe('vuelve', () => {
     const composable = vuelve({
       data: { count: 0 },
       computed: {
-        doubled(this: any) {
-          return this.count.value * 2
+        doubled() {
+          return this.count?.value * 2
         },
       },
     })
@@ -90,7 +90,7 @@ describe('vuelve', () => {
     const composable = vuelve({
       data: { count: 0 },
       methods: {
-        increment(this: any) {
+        increment() {
           this.count.value += 1
         },
       },
@@ -127,7 +127,7 @@ describe('vuelve', () => {
     const composable = vuelve({
       data: { count: 0 },
       methods: {
-        increment(this: any) {
+        increment() {
           this.count.value += 1
         },
       },
@@ -137,7 +137,7 @@ describe('vuelve', () => {
         },
       },
       watchEffect: {
-        watchEffectSpy(this: any) {
+        watchEffectSpy() {
           watchEffectSpy(this.count.value)
         },
       },
@@ -167,7 +167,7 @@ describe('vuelve', () => {
     const composable = vuelve({
       data: { count: 1 },
       methods: {
-        increment(this: any) {
+        increment() {
           this.count.value += 1
         },
       },

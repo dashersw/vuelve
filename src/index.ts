@@ -1,4 +1,5 @@
-/* eslint-disable no-console */
+/* eslint-disable no-shadow */
+/* eslint-disable no-use-before-define */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/ban-types */
 import {
@@ -6,107 +7,154 @@ import {
   watch,
   computed,
   watchEffect,
-  onMounted,
-  onBeforeUpdate,
-  onUpdated,
-  onBeforeUnmount,
-  onUnmounted,
-  onErrorCaptured,
-  onRenderTracked,
-  onRenderTriggered,
-  onActivated,
-  onDeactivated,
-  onServerPrefetch,
   WatchCallback,
-  WatchSource,
   WatchEffect,
   ComputedRef,
-  UnwrapRef,
+  MethodOptions,
+  ComputedOptions,
   Ref,
 } from 'vue'
 import cloneDeep from 'lodash.clonedeep'
+import { isArray, isFunction } from './utils.ts'
+import {
+  ComposableArrayProps,
+  ComposableContext,
+  ComposableObjectProps,
+  ComposableReturn,
+  ComposableWithoutProps,
+} from './types-handling.ts'
+import { vue3LifecycleHooks } from './lifecycle.ts'
 
-const vue3LifecycleHooks = {
-  mounted: onMounted,
-  beforeUpdate: onBeforeUpdate,
-  updated: onUpdated,
-  beforeUnmount: onBeforeUnmount,
-  unmounted: onUnmounted,
-  errorCaptured: onErrorCaptured,
-  renderTracked: onRenderTracked,
-  renderTriggered: onRenderTriggered,
-  activated: onActivated,
-  deactivated: onDeactivated,
-  serverPrefetch: onServerPrefetch,
-}
-type IndexableMethods = Record<string, (...methodArgs: any[]) => any>
+export function vuelve<
+  Props = {},
+  Data = {},
+  Computed extends ComputedOptions = {},
+  Methods extends MethodOptions = {},
+  Args extends any[] = any[]
+>(
+  composable: ComposableWithoutProps<Props, Data, Computed, Methods>
+): (...args: Args) => ComposableReturn<Data, Computed, Methods, Args>
 
-export type Composable<P extends object, D extends object, M extends IndexableMethods, C extends object> = {
-  [K in keyof typeof vue3LifecycleHooks]?: (...args: any[]) => any
-} & {
-  props?: Array<keyof P>
-  data?: D
-  methods?: M
-  computed?: C
-  watch?: Record<string, WatchCallback<readonly (object | WatchSource<unknown>)[]>>
-  watchEffect?: Record<string, WatchEffect>
-} & ThisType<
-    P &
-      M &
-      {
-        [K in keyof D]: Ref<UnwrapRef<D[K]>>
-      } &
-      { [K in keyof C]: ComputedRef<C[K]> }
-  >
+export function vuelve<
+  Props extends string,
+  Data,
+  Computed extends ComputedOptions,
+  Methods extends MethodOptions,
+  Args extends any[]
+>(
+  composable: ComposableArrayProps<Props, Data, Computed, Methods>
+): (...args: Args) => ComposableReturn<Data, Computed, Methods, Args>
 
-export default function vuelve<P extends object, D extends object, M extends IndexableMethods, C extends object>(
-  composable: Composable<P, D, M, C>
-): (
-  ...args: any[]
-) => P &
-  {
-    [K in keyof D]: Ref<UnwrapRef<D[K]>>
-  } &
-  M &
-  { [K in keyof C]: ComputedRef<C[K]> } {
-  return function setup(...args: any[]) {
-    const props: P = {} as P
-    const data: Partial<{ [K in keyof D]: Ref<UnwrapRef<D[K]>> }> = {}
-    const methods: M = {} as M
-    const computeds: Partial<{ [K in keyof C]: ComputedRef<C[K]> }> = {}
+export function vuelve<
+  Props = {},
+  Data = {},
+  Computed extends ComputedOptions = ComputedOptions,
+  Methods extends MethodOptions = MethodOptions,
+  Args extends any[] = any[]
+>(
+  composable: ComposableObjectProps<Props, Data, Computed, Methods>
+): (...args: Args) => ComposableReturn<Data, Computed, Methods, Args>
 
-    const context = {} as P &
-      {
-        [K in keyof D]: Ref<UnwrapRef<D[K]>>
-      } &
-      M &
-      { [K in keyof C]: ComputedRef<C[K]> }
+export default function vuelve<
+  PropNames extends string = string,
+  Props = {},
+  Data = {},
+  Computed extends ComputedOptions = {},
+  Methods extends MethodOptions = {},
+  Args extends any[] = any[]
+>(
+  composable:
+    | ComposableWithoutProps<Props, Data, Computed, Methods>
+    | ComposableArrayProps<PropNames, Data, Computed, Methods>
+    | ComposableObjectProps<Props, Data, Computed, Methods>
+) {
+  return function setup(...args: Args) {
+    let props = {} as Record<string, Ref<any>>
+    let data = {} as Record<string, Ref<any>>
+    let methods = {} as Record<string, Function>
+    let computeds = {} as Record<string, ComputedRef<any>>
 
-    args.forEach((arg, i) => {
-      const propName = composable.props?.[i]
+    const context = {} as ComposableContext<any, any, any, any>
 
-      if (typeof propName === 'string') {
-        props[propName as keyof P] = arg
-      }
-    })
-    Object.assign(context, props)
-    if (composable.data) {
-      Object.entries(composable.data).forEach(([key, value]) => {
-        data[key as keyof D] = ref(cloneDeep(value)) as Ref<UnwrapRef<D[keyof D]>>
+    if (composable.props) {
+      const isComposablePropsArray = isArray(composable.props)
+      const propKeys = isComposablePropsArray ? composable.props : Object.keys(composable.props)
+      const getPropType = (key: number) => Object.values(composable.props)[key] as Function
+
+      args?.forEach((arg, i) => {
+        if (isComposablePropsArray) {
+          /*
+            For like this:
+            const composable = vuelve({
+              props: ['count'],
+            })
+          */
+          const propName = composable.props[i]
+
+          if (propName) {
+            props = {
+              ...props,
+              [propName]: arg,
+            }
+          }
+        } else {
+          /*
+            For like this:
+            const composable = vuelve({
+              props: {
+                count: Number,
+              },
+            })
+          */
+          const propKey = propKeys[i]
+          const propType = getPropType(i)
+
+          // Check argument type is correct
+          if (propKey && propType) {
+            if (arg.constructor.name !== propType.name) {
+              throw new TypeError(
+                `Invalid prop: type check failed for prop "${propKey}". Expected ${propType?.name}, got ${arg.constructor.name}`
+              )
+            }
+
+            props = {
+              ...props,
+              [propKey]: arg,
+            }
+          }
+        }
       })
     }
-    
-    Object.assign(context, data)
+
+    if (composable.data) {
+      if (isFunction(composable.data)) {
+        const dataObject = (composable.data as Function)()
+
+        Object.entries(dataObject).forEach(([key, value]) => {
+          const refValue = ref(cloneDeep(value))
+          data = {
+            ...data,
+            [key]: refValue,
+          }
+        })
+      }
+    }
+
+    Object.assign(context, data, props)
+
     if (composable.methods) {
-      Object.entries(composable.methods).forEach(([key, value]) => {
-        methods[key as keyof M] = ((...methodArgs: any[]) =>
-          (value as (...methodArgs: any[]) => any).apply(context, methodArgs)) as M[keyof M]
+      Object.entries(composable.methods).forEach(([methodName, methodHandler]) => {
+        methods = {
+          ...methods,
+          [methodName]: methodHandler.bind(context),
+        }
       })
     }
 
     Object.assign(context, methods)
+
     Object.entries(vue3LifecycleHooks).forEach(([lifecycleHookName, vue3LifecycleHook]) => {
-      const lifecycleHookNameKey = lifecycleHookName as keyof Composable<P, D, M, C>
+      const lifecycleHookNameKey = lifecycleHookName as keyof typeof vue3LifecycleHooks
 
       if (composable[lifecycleHookNameKey]) {
         const composableFunction = composable[lifecycleHookNameKey] as Function
@@ -116,27 +164,41 @@ export default function vuelve<P extends object, D extends object, M extends Ind
 
     if (composable.watch) {
       Object.entries(composable.watch).forEach(([key, value]) => {
-        if (data[key as keyof D]) {
-          watch(data[key as keyof D] as any, value)
-        } 
+        const watchCallback = value as WatchCallback
+
+        const watchedData = context[key]
+
+        if (watchedData) {
+          watch(watchedData, watchCallback.bind(context))
+        }
       })
     }
 
     if (composable.watchEffect) {
       Object.values(composable.watchEffect).forEach(value => {
-        watchEffect(value.bind(context))
+        const watchEffectFunction = value as WatchEffect
+        watchEffect(watchEffectFunction.bind(context))
       })
     }
 
     if (composable.computed) {
       Object.keys(composable.computed).forEach(key => {
-        const composableComputedFunction = composable.computed?.[key as keyof C]
+        const composableComputedFunction =
+          composable.computed && (composable.computed[key as keyof typeof composable.computed] as Function)
         if (composableComputedFunction) {
-          computeds[key as keyof C] = computed((composableComputedFunction as () => any).bind(context))
+          computeds = {
+            ...computeds,
+            [key]: computed(composableComputedFunction.bind(context)),
+          }
         }
       })
     }
-    Object.assign(context, computeds)
-    return context
+
+    return {
+      ...props,
+      ...data,
+      ...methods,
+      ...computeds,
+    } as ComposableReturn<Data, Computed, Methods, Args>
   }
 }

@@ -7,7 +7,9 @@ describe('vuelve', () => {
   it('handles props correctly', async () => {
     const composable = vuelve({
       props: ['title'],
-      data: { count: 0 },
+      data() {
+        return { count: 0 }
+      },
       computed: {
         titleWithCount() {
           return `${this.title} ${this.count.value}`
@@ -37,10 +39,12 @@ describe('vuelve', () => {
 
   it('implements computed properties', async () => {
     const composable = vuelve({
-      data: { count: 0 },
+      data() {
+        return { count: 0 }
+      },
       computed: {
         doubled() {
-          return this.count?.value * 2
+          return this.count.value * 2
         },
       },
     })
@@ -88,7 +92,9 @@ describe('vuelve', () => {
     const updatedSpy = jest.fn()
 
     const composable = vuelve({
-      data: { count: 0 },
+      data() {
+        return { count: 0 }
+      },
       methods: {
         increment() {
           this.count.value += 1
@@ -125,7 +131,9 @@ describe('vuelve', () => {
     const watchEffectSpy = jest.fn()
 
     const composable = vuelve({
-      data: { count: 0 },
+      data() {
+        return { count: 0 }
+      },
       methods: {
         increment() {
           this.count.value += 1
@@ -165,7 +173,9 @@ describe('vuelve', () => {
     const renderTrackedSpy = jest.fn()
 
     const composable = vuelve({
-      data: { count: 1 },
+      data() {
+        return { count: 0 }
+      },
       methods: {
         increment() {
           this.count.value += 1
@@ -194,5 +204,60 @@ describe('vuelve', () => {
     await nextTick()
     expect(renderTriggeredSpy).toHaveBeenCalled()
     expect(renderTrackedSpy).toHaveBeenCalled()
+  })
+
+  it('throws an error when props are of incorrect type', async () => {
+    const composable = vuelve({
+      props: {
+        title: String,
+      },
+      data() {
+        return { count: 0 }
+      },
+      computed: {
+        titleWithCount() {
+          return `${this.title} ${this.count.value}`
+        },
+      },
+    })
+
+    expect(() => composable(1)).toThrow(
+      new TypeError('Invalid prop: type check failed for prop "title". Expected String, got Number')
+    )
+  })
+
+  it('successfully handles props of correct type', async () => {
+    const composable = vuelve({
+      props: {
+        title: String,
+      },
+      data() {
+        return { count: 0 }
+      },
+      computed: {
+        titleWithCount() {
+          return `${this.title} ${this.count.value}`
+        },
+      },
+    })
+
+    const component = defineComponent({
+      props: {
+        title: String,
+      },
+      setup(props) {
+        const { titleWithCount } = composable(props.title)
+        return { titleWithCount }
+      },
+      template: '<div>{{ titleWithCount }}</div>',
+    })
+
+    const wrapper = mount(component, {
+      props: {
+        title: 'Count:',
+      },
+    })
+
+    expect(wrapper.text()).toContain('Count: 0')
   })
 })

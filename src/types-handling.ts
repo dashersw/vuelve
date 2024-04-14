@@ -61,7 +61,7 @@ export type ComposableOptions<Props, Data, Computed, Methods> = {
   data?: Data | (() => Data)
   methods?: Methods
   computed?: Computed
-  watchEffect?: Record<string, (this: ComposableContext<Props, Data, Computed, Methods>) => any>
+  watchEffect?: Record<string, (...args: any[]) => void>
 } & ComposableLifecycleHook
 
 /**

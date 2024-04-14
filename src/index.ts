@@ -22,8 +22,29 @@ import {
   ComposableObjectProps,
   ComposableReturn,
   ComposableWithoutProps,
+  DeepApplyThisType,
 } from './types-handling.ts'
 import { vue3LifecycleHooks } from './lifecycle.ts'
+
+type Composable<
+  PropNames extends string,
+  Props = {},
+  Data = {},
+  Computed extends ComputedOptions = ComputedOptions,
+  Methods extends MethodOptions = MethodOptions
+> =
+  | DeepApplyThisType<
+      ComposableWithoutProps<Props, Data, Computed, Methods>,
+      ComposableContext<Props, Data, Computed, Methods>
+    >
+  | DeepApplyThisType<
+      ComposableArrayProps<PropNames, Data, Computed, Methods>,
+      ComposableContext<Props, Data, Computed, Methods>
+    >
+  | DeepApplyThisType<
+      ComposableObjectProps<Props, Data, Computed, Methods>,
+      ComposableContext<Props, Data, Computed, Methods>
+    >
 
 export function vuelve<
   Props = {},
@@ -32,7 +53,10 @@ export function vuelve<
   Methods extends MethodOptions = {},
   Args extends any[] = any[]
 >(
-  composable: ComposableWithoutProps<Props, Data, Computed, Methods>
+  composable: DeepApplyThisType<
+    ComposableWithoutProps<Props, Data, Computed, Methods>,
+    ComposableContext<Props, Data, Computed, Methods>
+  >
 ): (...args: Args) => ComposableReturn<Data, Computed, Methods, Args>
 
 export function vuelve<
@@ -42,7 +66,10 @@ export function vuelve<
   Methods extends MethodOptions,
   Args extends any[]
 >(
-  composable: ComposableArrayProps<Props, Data, Computed, Methods>
+  composable: DeepApplyThisType<
+    ComposableArrayProps<Props, Data, Computed, Methods>,
+    ComposableContext<Props, Data, Computed, Methods>
+  >
 ): (...args: Args) => ComposableReturn<Data, Computed, Methods, Args>
 
 export function vuelve<
@@ -52,7 +79,10 @@ export function vuelve<
   Methods extends MethodOptions = MethodOptions,
   Args extends any[] = any[]
 >(
-  composable: ComposableObjectProps<Props, Data, Computed, Methods>
+  composable: DeepApplyThisType<
+    ComposableObjectProps<Props, Data, Computed, Methods>,
+    ComposableContext<Props, Data, Computed, Methods>
+  >
 ): (...args: Args) => ComposableReturn<Data, Computed, Methods, Args>
 
 export default function vuelve<
@@ -62,12 +92,7 @@ export default function vuelve<
   Computed extends ComputedOptions = {},
   Methods extends MethodOptions = {},
   Args extends any[] = any[]
->(
-  composable:
-    | ComposableWithoutProps<Props, Data, Computed, Methods>
-    | ComposableArrayProps<PropNames, Data, Computed, Methods>
-    | ComposableObjectProps<Props, Data, Computed, Methods>
-) {
+>(composable: Composable<PropNames, Props, Data, Computed, Methods>) {
   return function setup(...args: Args) {
     let props = {} as Record<string, Ref<any>>
     let data = {} as Record<string, Ref<any>>

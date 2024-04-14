@@ -8,7 +8,6 @@ import {
   ComputedOptions,
   ComputedRef,
   ExtractPropTypes,
-  MethodOptions,
   Ref,
   UnwrapRef,
 } from 'vue'
@@ -28,19 +27,31 @@ export type Prettify<T> = { [K in keyof T]: T[K] } & {}
  * ```
  */
 export type ArrayToPropsObject<T extends readonly string[]> = {
-  [P in T[number]]: any
+  readonly [P in T[number]]: any
 }
 
 export type ComposableContext<Props, Data, Computed, Methods> = Props extends string[]
   ? ArrayToPropsObject<Props>
   : Props &
       {
-        [K in keyof Methods]: Methods[K] & ((...args: any[]) => any)
+        readonly [K in keyof Methods]: Methods[K]
       } &
       {
-        [K in keyof Data]: Ref<UnwrapRef<Data[K]>>
+        readonly [K in keyof Data]: Ref<UnwrapRef<Data[K]>>
       } &
-      { [K in keyof Computed]: ComputedRef<Computed[K]> }
+      { readonly [K in keyof Computed]: ComputedRef<Computed[K]> }
+
+interface MethodOptions {
+  [key: string]: Function
+}
+
+export type DeepApplyThisType<T, TThis> = {
+  // eslint-disable-next-line no-use-before-define
+  [K in keyof T]: DistributionHelper<T[K], TThis>
+} &
+  ThisType<TThis>
+
+type DistributionHelper<T, TThis> = T extends Function | string | number | boolean ? T : DeepApplyThisType<T, TThis>
 
 /**
  * Options for a vuelve function that define the props, data, computed, and methods of the component & vue3 lifecycle hooks
@@ -48,9 +59,10 @@ export type ComposableContext<Props, Data, Computed, Methods> = Props extends st
 export type ComposableOptions<Props, Data, Computed, Methods> = {
   props?: Props
   data?: Data | (() => Data)
-  watch?: Record<keyof Data, (this: ComposableContext<Props, Data, Computed, Methods>, ...args: any[]) => any>
+  methods?: Methods
+  computed?: Computed
   watchEffect?: Record<string, (this: ComposableContext<Props, Data, Computed, Methods>) => any>
-} & ComposableLifecycleHook<Props, Data, Computed, Methods>
+} & ComposableLifecycleHook
 
 /**
  * Options for a vuelve function without props
@@ -141,9 +153,7 @@ export type ComposableReturn<Data, Computed, Methods, Args> = {
   {
     [K in keyof Computed]: Ref<UnwrapRef<Computed[K]>>
   } &
-  {
-    [K in keyof Methods]: Methods[K]
-  } &
+  Methods &
   {
     [K in keyof Args]?: Args[K] extends Ref ? UnwrapRef<Args[K]> : Args[K]
   }

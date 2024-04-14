@@ -12,7 +12,6 @@ import {
   onUnmounted,
   onUpdated,
 } from 'vue'
-import { ComposableContext } from './types-handling.ts'
 
 export const vue3LifecycleHooks = {
   mounted: onMounted,
@@ -26,10 +25,10 @@ export const vue3LifecycleHooks = {
   activated: onActivated,
   deactivated: onDeactivated,
   serverPrefetch: onServerPrefetch,
-}
+} as const
 
-export type ComposableLifecycleHook<Props, Data, Computed, Methods> = {
-  [K in keyof typeof vue3LifecycleHooks]?:
-    | typeof vue3LifecycleHooks[K]
-    | ((this: ComposableContext<Props, Data, Computed, Methods>, ...args: any[]) => any)
+type HookNames = keyof typeof vue3LifecycleHooks
+
+export type ComposableLifecycleHook = {
+  [K in HookNames]?: (...args: any[]) => void
 }

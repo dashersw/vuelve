@@ -7,7 +7,6 @@ import {
   ComponentOptionsWithoutProps,
   ComputedOptions,
   ComputedRef,
-  ExtractPropTypes,
   Ref,
   UnwrapRef,
 } from 'vue'
@@ -30,16 +29,40 @@ export type ArrayToPropsObject<T extends readonly string[]> = {
   readonly [P in T[number]]: any
 }
 
-export type ComposableContext<Props, Data, Computed, Methods> = Props extends string[]
-  ? ArrayToPropsObject<Props>
-  : Props &
-      {
-        readonly [K in keyof Methods]: Methods[K]
-      } &
-      {
-        readonly [K in keyof Data]: Ref<UnwrapRef<Data[K]>>
-      } &
-      { readonly [K in keyof Computed]: ComputedRef<Computed[K]> }
+type ConstructorToPrimitive<T> = T extends ArrayConstructor
+  ? any[]
+  : T extends ObjectConstructor
+  ? Record<string, any>
+  : T extends StringConstructor
+  ? string
+  : T extends NumberConstructor
+  ? number
+  : T extends BooleanConstructor
+  ? boolean
+  : T extends DateConstructor
+  ? Date
+  : T
+
+export type ComposableContext<Props, Data, Computed, Methods, Args> = (Props extends string
+  ? /**
+     * ["title"] -> { title: ArgType | any }
+     */
+    {
+      readonly [P in Props[number]]: Args extends { [K in keyof Props[number]]: infer ArgType } ? ArgType : any
+    }
+  : /**
+     * { title: Number } -> { title: Number | undefined }
+     */
+    {
+      readonly [P in keyof Props]: ConstructorToPrimitive<Props[P]> | undefined
+    }) &
+  {
+    readonly [K in keyof Methods]: Methods[K]
+  } &
+  {
+    readonly [K in keyof Data]: Ref<UnwrapRef<Data[K]>>
+  } &
+  { readonly [K in keyof Computed]: ComputedRef<Computed[K]> }
 
 interface MethodOptions {
   [key: string]: Function
@@ -56,11 +79,10 @@ type DistributionHelper<T, TThis> = T extends Function | string | number | boole
 /**
  * Options for a vuelve function that define the props, data, computed, and methods of the component & vue3 lifecycle hooks
  */
-export type ComposableOptions<Props, Data, Computed, Methods> = {
-  props?: Props
+export type ComposableOptions<Data, Computed, Methods> = {
   data?: Data | (() => Data)
-  methods?: Methods
   computed?: Computed
+  methods?: Methods
   watchEffect?: Record<string, (...args: any[]) => void>
 } & ComposableLifecycleHook
 
@@ -86,8 +108,8 @@ export type ComposableWithoutProps<
   Data = {},
   Computed extends ComputedOptions = {},
   Methods extends MethodOptions = {}
-> = ComponentOptionsWithoutProps<any, any, Data, Computed, Methods, any, any, any, any, any, any, any, any> &
-  ComposableOptions<Props, Data, Computed, Methods>
+> = ComposableOptions<Data, Computed, Methods> &
+  ComponentOptionsWithoutProps<Props, any, Data, Computed, Methods, any, any, any, any, any, any, any, any>
 
 /**
  * Options for a vuelve function with props as an array of strings
@@ -112,8 +134,8 @@ export type ComposableArrayProps<
   Data = {},
   Computed extends ComputedOptions = {},
   Methods extends MethodOptions = {}
-> = ComponentOptionsWithArrayProps<any, any, Data, Computed, Methods, any, any, any, any, any, any, any, any> &
-  ComposableOptions<PropNames, Data, Computed, Methods>
+> = ComposableOptions<Data, Computed, Methods> &
+  ComponentOptionsWithArrayProps<PropNames, any, Data, Computed, Methods, any, any, any, any, any, any, any, any>
 
 /**
  * Options for a vuelve function with props as an object
@@ -139,10 +161,9 @@ export type ComposableObjectProps<
   PropsOptions = ComponentObjectPropsOptions,
   Data = {},
   Computed extends ComputedOptions = {},
-  Methods extends MethodOptions = {},
-  Props = Prettify<Readonly<ExtractPropTypes<PropsOptions>>>
-> = ComponentOptionsWithObjectProps<any, any, Data, Computed, Methods, any, any, any, any, any, any, any, any> &
-  ComposableOptions<Props, Data, Computed, Methods>
+  Methods extends MethodOptions = {}
+> = ComposableOptions<Data, Computed, Methods> &
+  ComponentOptionsWithObjectProps<PropsOptions, any, Data, Computed, Methods, any, any, any, any, any, any, any, any>
 
 /**
  * Returns the type of the return value of a vuelve function

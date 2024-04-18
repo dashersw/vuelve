@@ -31,22 +31,23 @@ type Composable<
   Props = {},
   Data = {},
   Computed extends ComputedOptions = ComputedOptions,
-  Methods extends MethodOptions = MethodOptions
+  Methods extends MethodOptions = MethodOptions,
+  Args extends any[] = any[]
 > =
   | DeepApplyThisType<
       ComposableWithoutProps<Props, Data, Computed, Methods>,
-      ComposableContext<Props, Data, Computed, Methods>
+      ComposableContext<Props, Data, Computed, Methods, Args>
     >
   | DeepApplyThisType<
       ComposableArrayProps<PropNames, Data, Computed, Methods>,
-      ComposableContext<Props, Data, Computed, Methods>
+      ComposableContext<Props, Data, Computed, Methods, Args>
     >
   | DeepApplyThisType<
       ComposableObjectProps<Props, Data, Computed, Methods>,
-      ComposableContext<Props, Data, Computed, Methods>
+      ComposableContext<Props, Data, Computed, Methods, Args>
     >
 
-export function vuelve<
+function vuelve<
   Props = {},
   Data = {},
   Computed extends ComputedOptions = {},
@@ -55,11 +56,11 @@ export function vuelve<
 >(
   composable: DeepApplyThisType<
     ComposableWithoutProps<Props, Data, Computed, Methods>,
-    ComposableContext<Props, Data, Computed, Methods>
+    ComposableContext<Props, Data, Computed, Methods, Args>
   >
 ): (...args: Args) => ComposableReturn<Data, Computed, Methods, Args>
 
-export function vuelve<
+function vuelve<
   Props extends string,
   Data,
   Computed extends ComputedOptions,
@@ -68,11 +69,11 @@ export function vuelve<
 >(
   composable: DeepApplyThisType<
     ComposableArrayProps<Props, Data, Computed, Methods>,
-    ComposableContext<Props, Data, Computed, Methods>
+    ComposableContext<Props, Data, Computed, Methods, Args>
   >
 ): (...args: Args) => ComposableReturn<Data, Computed, Methods, Args>
 
-export function vuelve<
+function vuelve<
   Props = {},
   Data = {},
   Computed extends ComputedOptions = ComputedOptions,
@@ -81,30 +82,30 @@ export function vuelve<
 >(
   composable: DeepApplyThisType<
     ComposableObjectProps<Props, Data, Computed, Methods>,
-    ComposableContext<Props, Data, Computed, Methods>
+    ComposableContext<Props, Data, Computed, Methods, Args>
   >
 ): (...args: Args) => ComposableReturn<Data, Computed, Methods, Args>
 
-export default function vuelve<
+function vuelve<
   PropNames extends string = string,
   Props = {},
   Data = {},
   Computed extends ComputedOptions = {},
   Methods extends MethodOptions = {},
   Args extends any[] = any[]
->(composable: Composable<PropNames, Props, Data, Computed, Methods>) {
+>(composable: Composable<PropNames, Props, Data, Computed, Methods, Args>) {
   return function setup(...args: Args) {
     let props = {} as Record<string, Ref<any>>
     let data = {} as Record<string, Ref<any>>
     let methods = {} as Record<string, Function>
     let computeds = {} as Record<string, ComputedRef<any>>
 
-    const context = {} as ComposableContext<any, any, any, any>
+    const context = {} as ComposableContext<any, any, any, any, any>
 
     if (composable.props) {
       const isComposablePropsArray = isArray(composable.props)
       const propKeys = isComposablePropsArray ? composable.props : Object.keys(composable.props)
-      const getPropType = (key: number) => Object.values(composable.props)[key] as Function
+      const getPropType = (key: number) => Object.values(composable.props as object)[key] as Function
 
       args?.forEach((arg, i) => {
         if (isComposablePropsArray) {
@@ -114,7 +115,7 @@ export default function vuelve<
               props: ['count'],
             })
           */
-          const propName = composable.props[i]
+          const propName = (composable.props as string[])[i]
 
           if (propName) {
             props = {
@@ -131,7 +132,7 @@ export default function vuelve<
               },
             })
           */
-          const propKey = propKeys[i]
+          const propKey = (propKeys as string[])[i]
           const propType = getPropType(i)
 
           // Check argument type is correct
@@ -227,3 +228,5 @@ export default function vuelve<
     } as ComposableReturn<Data, Computed, Methods, Args>
   }
 }
+
+export default vuelve

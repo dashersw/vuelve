@@ -76,8 +76,8 @@ function vuelve<
 function vuelve<
   Props = {},
   Data = {},
-  Computed extends ComputedOptions = ComputedOptions,
-  Methods extends MethodOptions = MethodOptions,
+  Computed extends ComputedOptions = {},
+  Methods extends MethodOptions = {},
   Args extends any[] = any[]
 >(
   composable: DeepApplyThisType<

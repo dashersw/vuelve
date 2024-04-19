@@ -1,5 +1,7 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/ban-types */
 import { PropType } from 'vue'
+
 type Data = Record<string, unknown>
 
 type DefaultFactory<T> = (props: Data) => T | null | undefined

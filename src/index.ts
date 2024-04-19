@@ -140,7 +140,7 @@ function vuelve<
             if (isPropOptions(propType)) {
               if (typeof propType.type == 'function' && arg.constructor.name !== propType.type.name) {
                 throw new TypeError(
-                  `Invalid prop: type check failed for prop "${propKey}". Expected ${propType.type?.constructor.name}, got ${arg.constructor.name}`
+                  `Invalid prop: type check failed for prop "${propKey}". Expected ${propType.type?.name}, got ${arg.constructor.name}`
                 )
               }
             } else if (arg.constructor.name !== propType.name) {
@@ -158,17 +158,24 @@ function vuelve<
       })
       if (Object.keys(composable.props).length > args.length) {
         Object.keys(composable.props)
-          .slice(args.length - 1)
+          .slice(args.length)
           .forEach((propKey, i) => {
             const prop = getPropType(i)
 
             // Check if the property has the required: true property
             if (prop.required === true) {
               throw new Error(`${propKey} is required but not provided.`)
-            } else if(isPropOptions(prop)) {
-              props = {
-                ...props,
-                [propKey]: prop.default,
+            } else if (isPropOptions(prop)) {
+              if (typeof prop.default == 'function') {
+                props = {
+                  ...props,
+                  [propKey]: prop.default(),
+                }
+              } else {
+                props = {
+                  ...props,
+                  [propKey]: prop.default,
+                }
               }
             }
           })

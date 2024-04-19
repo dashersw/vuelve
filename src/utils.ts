@@ -26,6 +26,6 @@ export function isPropOptions(value: any): value is PropOptions {
     (value.required === undefined || typeof value.required === 'boolean') &&
     (value.default === undefined ||
       typeof value.default === 'function' ||
-      typeof value.default === value.type.name.toLowerCase())
+      (value.type !== true && typeof value.default === value.type.name.toLowerCase()))
   )
 }

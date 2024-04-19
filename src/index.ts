@@ -138,7 +138,6 @@ function vuelve<
           // Check argument type is correct
           if (propKey && propType) {
             if (isPropOptions(propType)) {
-              console.log(propType.type)
               if (typeof propType.type == 'function' && arg.constructor.name !== propType.type.name) {
                 throw new TypeError(
                   `Invalid prop: type check failed for prop "${propKey}". Expected ${propType.type?.constructor.name}, got ${arg.constructor.name}`

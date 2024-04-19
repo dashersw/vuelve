@@ -7,6 +7,7 @@ import {
   ComponentOptionsWithoutProps,
   ComputedOptions,
   ComputedRef,
+  ExtractPropTypes,
   Ref,
   UnwrapRef,
 } from 'vue'
@@ -29,20 +30,6 @@ export type ArrayToPropsObject<T extends readonly string[]> = {
   readonly [P in T[number]]: any
 }
 
-type ConstructorToPrimitive<T> = T extends ArrayConstructor
-  ? any[]
-  : T extends ObjectConstructor
-  ? Record<string, any>
-  : T extends StringConstructor
-  ? string
-  : T extends NumberConstructor
-  ? number
-  : T extends BooleanConstructor
-  ? boolean
-  : T extends DateConstructor
-  ? Date
-  : T
-
 export type ComposableContext<Props, Data, Computed, Methods, Args> = (Props extends string
   ? /**
      * ["title"] -> { title: ArgType | any }
@@ -53,9 +40,8 @@ export type ComposableContext<Props, Data, Computed, Methods, Args> = (Props ext
   : /**
      * { title: Number } -> { title: Number | undefined }
      */
-    {
-      readonly [P in keyof Props]: ConstructorToPrimitive<Props[P]> | undefined
-    }) &
+
+    Prettify<Readonly<ExtractPropTypes<Props>>>) &
   {
     readonly [K in keyof Methods]: Methods[K]
   } &

@@ -12,10 +12,11 @@ import {
   ComputedRef,
   MethodOptions,
   ComputedOptions,
+  ComponentObjectPropsOptions,
   Ref,
 } from 'vue'
 import cloneDeep from 'lodash.clonedeep'
-import { isArray, isFunction } from './utils.ts'
+import { isArray, isFunction, isPropOptions } from './utils.ts'
 import {
   ComposableArrayProps,
   ComposableContext,
@@ -46,7 +47,6 @@ type Composable<
       ComposableObjectProps<Props, Data, Computed, Methods>,
       ComposableContext<Props, Data, Computed, Methods, Args>
     >
-
 function vuelve<
   Props = {},
   Data = {},
@@ -74,7 +74,7 @@ function vuelve<
 ): (...args: Args) => ComposableReturn<Data, Computed, Methods, Args>
 
 function vuelve<
-  Props = {},
+  Props extends ComponentObjectPropsOptions = {},
   Data = {},
   Computed extends ComputedOptions = {},
   Methods extends MethodOptions = {},
@@ -95,7 +95,7 @@ function vuelve<
   Args extends any[] = any[]
 >(composable: Composable<PropNames, Props, Data, Computed, Methods, Args>) {
   return function setup(...args: Args) {
-    let props = {} as Record<string, Ref<any>>
+    let props = {} as Record<string, Ref<any> | undefined>
     let data = {} as Record<string, Ref<any>>
     let methods = {} as Record<string, Function>
     let computeds = {} as Record<string, ComputedRef<any>>
@@ -105,7 +105,7 @@ function vuelve<
     if (composable.props) {
       const isComposablePropsArray = isArray(composable.props)
       const propKeys = isComposablePropsArray ? composable.props : Object.keys(composable.props)
-      const getPropType = (key: number) => Object.values(composable.props as object)[key] as Function
+      const getPropType = (key: number) => Object.values(composable.props as object)[key]
 
       args?.forEach((arg, i) => {
         if (isComposablePropsArray) {
@@ -137,7 +137,13 @@ function vuelve<
 
           // Check argument type is correct
           if (propKey && propType) {
-            if (arg.constructor.name !== propType.name) {
+            if (isPropOptions(propType)) {
+              if (typeof propType.type == 'function' && arg.constructor.name !== propType.type.name) {
+                throw new TypeError(
+                  `Invalid prop: type check failed for prop "${propKey}". Expected ${propType.type?.name}, got ${arg.constructor.name}`
+                )
+              }
+            } else if (arg.constructor.name !== propType.name) {
               throw new TypeError(
                 `Invalid prop: type check failed for prop "${propKey}". Expected ${propType?.name}, got ${arg.constructor.name}`
               )
@@ -150,8 +156,31 @@ function vuelve<
           }
         }
       })
-    }
+      if (Object.keys(composable.props).length > args.length) {
+        Object.keys(composable.props)
+          .slice(args.length)
+          .forEach((propKey, i) => {
+            const prop = getPropType(i)
 
+            // Check if the property has the required: true property
+            if (prop.required === true) {
+              throw new Error(`${propKey} is required but not provided.`)
+            } else if (isPropOptions(prop)) {
+              if (typeof prop.default == 'function') {
+                props = {
+                  ...props,
+                  [propKey]: prop.default(),
+                }
+              } else {
+                props = {
+                  ...props,
+                  [propKey]: prop.default,
+                }
+              }
+            }
+          })
+      }
+    }
     if (composable.data) {
       if (isFunction(composable.data)) {
         const dataObject = (composable.data as Function)()

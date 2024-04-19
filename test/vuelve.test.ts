@@ -225,6 +225,125 @@ describe('vuelve', () => {
       new TypeError('Invalid prop: type check failed for prop "title". Expected String, got Number')
     )
   })
+  it('throws an error when prop of incorrect type is provided', async () => {
+    const composable = vuelve({
+      props: {
+        title: {
+          type: String,
+          required: true,
+        },
+      },
+      data() {
+        return { count: 0 }
+      },
+      computed: {
+        titleWithCount() {
+          return `${this.title} ${this.count.value}`
+        },
+      },
+    })
+
+    expect(() => composable(1)).toThrow(
+      new TypeError('Invalid prop: type check failed for prop "title". Expected String, got Number')
+    )
+  })
+
+  it('throws an error when required prop is not provided', async () => {
+    const composable = vuelve({
+      props: {
+        title: {
+          type: String,
+          required: true,
+        },
+        description: {
+          type: String,
+          required: true,
+        },
+      },
+      data() {
+        return { count: 0 }
+      },
+      computed: {
+        titleWithCount() {
+          return `${this.title} ${this.count.value}`
+        },
+      },
+    })
+
+    expect(() => composable('new title')).toThrow(new Error('description is required but not provided.'))
+  })
+  it('successfully handles prop of correct type with dynamic value', async () => {
+    const composable = vuelve({
+      props: {
+        title: {
+          type: true,
+        },
+      },
+      data() {
+        return { count: 0 }
+      },
+      computed: {
+        titleWithCount() {
+          return `${this.title} ${this.count.value}`
+        },
+      },
+    })
+
+    const component = defineComponent({
+      props: {
+        title: String,
+      },
+      setup(props) {
+        const { titleWithCount } = composable(props.title)
+        return { titleWithCount }
+      },
+      template: '<div>{{ titleWithCount }}</div>',
+    })
+
+    const wrapper = mount(component, {
+      props: {
+        title: 'Count:',
+      },
+    })
+
+    expect(wrapper.text()).toContain('Count: 0')
+  })
+  it('successfully handles props with default values', async () => {
+    const composable = vuelve({
+      props: {
+        title: {
+          type: String,
+          required: false,
+          default: () => 'Count',
+        },
+        secondTitle: {
+          type: String,
+          required: false,
+          default: 'Click:',
+        },
+      },
+      data() {
+        return { count: 0 }
+      },
+      computed: {
+        titleWithCount() {
+          return `${this.title} and ${this.secondTitle} ${this.count.value}`
+        },
+      },
+    })
+
+    const component = defineComponent({
+      setup() {
+        const { titleWithCount } = composable()
+        return { titleWithCount }
+      },
+      template: '<div>{{ titleWithCount }}</div>',
+    })
+
+    const wrapper = mount(component)
+
+    expect(wrapper.text()).toContain('Count and Click: 0')
+  })
 
   it('successfully handles props of correct type', async () => {
     const composable = vuelve({

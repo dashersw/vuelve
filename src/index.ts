@@ -166,10 +166,10 @@ function vuelve<
             // Check if the property has the required: true property
             if (prop.required === true) {
               throw new Error(`${propKey} is required but not provided.`)
-            } else {
+            } else if(isPropOptions(prop)) {
               props = {
                 ...props,
-                [propKey]: undefined,
+                [propKey]: prop.default,
               }
             }
           })

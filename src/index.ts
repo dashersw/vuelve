@@ -95,18 +95,15 @@ function vuelve<
   Args extends Record<string, any> = Record<string, any>
 >(composable: Composable<PropNames, Props, Data, Computed, Methods, Args>) {
   return function setup(args?: Args) {
-    let props = {} as Record<string, Ref<any> | undefined>
-    let data = {} as Record<string, Ref<any>>
-    let methods = {} as Record<string, Function>
-    let computeds = {} as Record<string, ComputedRef<any>>
+    const props = {} as Record<string, Ref<any> | undefined>
+    const data = {} as Record<string, Ref<any>>
+    const methods = {} as Record<string, Function>
+    const computeds = {} as Record<string, ComputedRef<any>>
 
-    const context = {} as ComposableContext<any, any, any, any, any>
+    let context = {} as ComposableContext<any, any, any, any, any>
 
     function addProps(key: string, value: any) {
-      props = {
-        ...props,
-        [key]: value,
-      }
+      props[key] = value
     }
 
     if (composable.props) {
@@ -156,10 +153,7 @@ function vuelve<
             } else if (prop.default) {
               // If prop is not provided, then we can use the default value
               const defaultValue = isFunction(prop.default) ? prop.default() : prop.default
-              props = {
-                ...props,
-                [propKey]: defaultValue,
-              }
+              addProps(propKey, defaultValue)
             } else if (prop.required) {
               // If prop is required but not provided, then we throw an error
               throw new Error(`${propKey} is required but not provided.`)
@@ -196,26 +190,27 @@ function vuelve<
 
         Object.entries(dataObject).forEach(([key, value]) => {
           const refValue = ref(cloneDeep(value))
-          data = {
-            ...data,
-            [key]: refValue,
-          }
+          data[key] = refValue
         })
       }
     }
 
-    Object.assign(context, data, props)
+    context = {
+      ...context,
+      ...data,
+      ...props,
+    }
 
     if (composable.methods) {
       Object.entries(composable.methods).forEach(([methodName, methodHandler]) => {
-        methods = {
-          ...methods,
-          [methodName]: methodHandler.bind(context),
-        }
+        methods[methodName] = methodHandler.bind(context)
       })
     }
 
-    Object.assign(context, methods)
+    context = {
+      ...context,
+      ...methods,
+    }
 
     Object.entries(vue3LifecycleHooks).forEach(([lifecycleHookName, vue3LifecycleHook]) => {
       const lifecycleHookNameKey = lifecycleHookName as keyof typeof vue3LifecycleHooks
@@ -250,10 +245,7 @@ function vuelve<
         const composableComputedFunction =
           composable.computed && (composable.computed[key as keyof typeof composable.computed] as Function)
         if (composableComputedFunction) {
-          computeds = {
-            ...computeds,
-            [key]: computed(composableComputedFunction.bind(context)),
-          }
+          computeds[key] = computed(composableComputedFunction.bind(context))
         }
       })
     }

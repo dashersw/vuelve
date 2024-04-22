@@ -1,5 +1,3 @@
-/* eslint-disable no-shadow */
-/* eslint-disable no-use-before-define */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/ban-types */
 import {
@@ -100,11 +98,7 @@ function vuelve<
     const methods = {} as Record<string, Function>
     const computeds = {} as Record<string, ComputedRef<any>>
 
-    let context = {} as ComposableContext<any, any, any, any, any>
-
-    function addProps(key: string, value: any) {
-      props[key] = value
-    }
+    const context = {} as ComposableContext<any, any, any, any, any>
 
     if (composable.props) {
       const isComposablePropsArray = isArray(composable.props)
@@ -119,7 +113,7 @@ function vuelve<
             })
           */
           if (args && args[propKey]) {
-            addProps(propKey, args[propKey])
+            props[propKey] = args[propKey]
           }
         } else {
           const prop = (composable.props as Record<string, any>)[propKey]
@@ -139,11 +133,11 @@ function vuelve<
             if (args && args[propKey]) {
               if (!prop.type || prop.type === true) {
                 // If prop type is not defined, then we can't check the type
-                addProps(propKey, args[propKey])
+                props[propKey] = args[propKey]
               } else if (typeof prop.type == 'function') {
                 // If prop type is defined, then we can check the type and throw an error if it's not the same
                 if (prop.type.name === args[propKey].constructor.name) {
-                  addProps(propKey, args[propKey])
+                  props[propKey] = args[propKey]
                 } else {
                   throw new TypeError(
                     `Invalid prop: type check failed for prop "${propKey}". Expected ${prop.type?.name}, got ${args[propKey].constructor.name}`
@@ -153,7 +147,7 @@ function vuelve<
             } else if (prop.default) {
               // If prop is not provided, then we can use the default value
               const defaultValue = isFunction(prop.default) ? prop.default() : prop.default
-              addProps(propKey, defaultValue)
+              props[propKey] = defaultValue
             } else if (prop.required) {
               // If prop is required but not provided, then we throw an error
               throw new Error(`${propKey} is required but not provided.`)
@@ -172,7 +166,7 @@ function vuelve<
 
             if (args && args[propKey]) {
               if (prop.name === args[propKey].constructor.name) {
-                addProps(propKey, args[propKey])
+                props[propKey] = args[propKey]
               } else {
                 throw new TypeError(
                   `Invalid prop: type check failed for prop "${propKey}". Expected ${prop.name}, got ${args[propKey].constructor.name}`
@@ -195,11 +189,7 @@ function vuelve<
       }
     }
 
-    context = {
-      ...context,
-      ...data,
-      ...props,
-    }
+    Object.assign(context, data, props)
 
     if (composable.methods) {
       Object.entries(composable.methods).forEach(([methodName, methodHandler]) => {
@@ -207,10 +197,7 @@ function vuelve<
       })
     }
 
-    context = {
-      ...context,
-      ...methods,
-    }
+    Object.assign(context, methods)
 
     Object.entries(vue3LifecycleHooks).forEach(([lifecycleHookName, vue3LifecycleHook]) => {
       const lifecycleHookNameKey = lifecycleHookName as keyof typeof vue3LifecycleHooks

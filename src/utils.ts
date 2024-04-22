@@ -17,7 +17,7 @@ interface PropOptions<T = any, D = T> {
 
 export const isFunction = (val: unknown): val is Function => typeof val === 'function'
 
-export const { isArray } = Array
+export const isArray = (val: unknown): val is Array<any> => Array.isArray(val)
 
 export function isPropOptions(value: any): value is PropOptions {
   return (

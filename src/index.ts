@@ -33,7 +33,7 @@ type Composable<
   Data = {},
   Computed extends ComputedOptions = ComputedOptions,
   Methods extends MethodOptions = MethodOptions,
-  Args extends any[] = any[]
+  Args extends Record<string, any> = Record<string, any>
 > =
   | DeepApplyThisType<
       ComposableWithoutProps<Props, Data, Computed, Methods>,
@@ -52,39 +52,39 @@ function vuelve<
   Data = {},
   Computed extends ComputedOptions = {},
   Methods extends MethodOptions = {},
-  Args extends any[] = any[]
+  Args extends Record<string, any> = Record<string, any>
 >(
   composable: DeepApplyThisType<
     ComposableWithoutProps<Props, Data, Computed, Methods>,
     ComposableContext<Props, Data, Computed, Methods, Args>
   >
-): (...args: Args) => ComposableReturn<Data, Computed, Methods, Args>
+): (args?: Args) => ComposableReturn<Data, Computed, Methods, Args>
 
 function vuelve<
   Props extends string,
   Data,
   Computed extends ComputedOptions,
   Methods extends MethodOptions,
-  Args extends any[]
+  Args extends Record<string, any> = Record<string, any>
 >(
   composable: DeepApplyThisType<
     ComposableArrayProps<Props, Data, Computed, Methods>,
     ComposableContext<Props, Data, Computed, Methods, Args>
   >
-): (...args: Args) => ComposableReturn<Data, Computed, Methods, Args>
+): (args?: Args) => ComposableReturn<Data, Computed, Methods, Args>
 
 function vuelve<
   Props extends ComponentObjectPropsOptions = {},
   Data = {},
   Computed extends ComputedOptions = {},
   Methods extends MethodOptions = {},
-  Args extends any[] = any[]
+  Args extends Record<string, any> = Record<string, any>
 >(
   composable: DeepApplyThisType<
     ComposableObjectProps<Props, Data, Computed, Methods>,
     ComposableContext<Props, Data, Computed, Methods, Args>
   >
-): (...args: Args) => ComposableReturn<Data, Computed, Methods, Args>
+): (args?: Args) => ComposableReturn<Data, Computed, Methods, Args>
 
 function vuelve<
   PropNames extends string = string,
@@ -92,9 +92,9 @@ function vuelve<
   Data = {},
   Computed extends ComputedOptions = {},
   Methods extends MethodOptions = {},
-  Args extends any[] = any[]
+  Args extends Record<string, any> = Record<string, any>
 >(composable: Composable<PropNames, Props, Data, Computed, Methods, Args>) {
-  return function setup(...args: Args) {
+  return function setup(args?: Args) {
     let props = {} as Record<string, Ref<any> | undefined>
     let data = {} as Record<string, Ref<any>>
     let methods = {} as Record<string, Function>
@@ -102,12 +102,18 @@ function vuelve<
 
     const context = {} as ComposableContext<any, any, any, any, any>
 
+    function addProps(key: string, value: any) {
+      props = {
+        ...props,
+        [key]: value,
+      }
+    }
+
     if (composable.props) {
       const isComposablePropsArray = isArray(composable.props)
-      const propKeys = isComposablePropsArray ? composable.props : Object.keys(composable.props)
-      const getPropType = (key: number) => Object.values(composable.props as object)[key]
+      const propKeys = isComposablePropsArray ? Object.values(composable.props) : Object.keys(composable.props)
 
-      args?.forEach((arg, i) => {
+      propKeys.forEach(propKey => {
         if (isComposablePropsArray) {
           /*
             For like this:
@@ -115,72 +121,75 @@ function vuelve<
               props: ['count'],
             })
           */
-          const propName = (composable.props as string[])[i]
-
-          if (propName) {
-            props = {
-              ...props,
-              [propName]: arg,
-            }
+          if (args && args[propKey]) {
+            addProps(propKey, args[propKey])
           }
         } else {
-          /*
-            For like this:
-            const composable = vuelve({
-              props: {
-                count: Number,
-              },
-            })
-          */
-          const propKey = (propKeys as string[])[i]
-          const propType = getPropType(i)
+          const prop = (composable.props as Record<string, any>)[propKey]
 
-          // Check argument type is correct
-          if (propKey && propType) {
-            if (isPropOptions(propType)) {
-              if (typeof propType.type == 'function' && arg.constructor.name !== propType.type.name) {
+          if (isPropOptions(prop)) {
+            /*
+            For like this:
+              const composable = vuelve({
+                props: {
+                  count: {
+                    type: Number,
+                    default: 0,
+                  },
+                },
+              })
+            */
+            if (args && args[propKey]) {
+              if (!prop.type || prop.type === true) {
+                // If prop type is not defined, then we can't check the type
+                addProps(propKey, args[propKey])
+              } else if (typeof prop.type == 'function') {
+                // If prop type is defined, then we can check the type and throw an error if it's not the same
+                if (prop.type.name === args[propKey].constructor.name) {
+                  addProps(propKey, args[propKey])
+                } else {
+                  throw new TypeError(
+                    `Invalid prop: type check failed for prop "${propKey}". Expected ${prop.type?.name}, got ${args[propKey].constructor.name}`
+                  )
+                }
+              }
+            } else if (prop.default) {
+              // If prop is not provided, then we can use the default value
+              const defaultValue = isFunction(prop.default) ? prop.default() : prop.default
+              props = {
+                ...props,
+                [propKey]: defaultValue,
+              }
+            } else if (prop.required) {
+              // If prop is required but not provided, then we throw an error
+              throw new Error(`${propKey} is required but not provided.`)
+            }
+          }
+
+          if (!isPropOptions(prop)) {
+            /*
+              For like this:
+              const composable = vuelve({
+                props: {
+                  count: Number,
+                },
+              })
+            */
+
+            if (args && args[propKey]) {
+              if (prop.name === args[propKey].constructor.name) {
+                addProps(propKey, args[propKey])
+              } else {
                 throw new TypeError(
-                  `Invalid prop: type check failed for prop "${propKey}". Expected ${propType.type?.name}, got ${arg.constructor.name}`
+                  `Invalid prop: type check failed for prop "${propKey}". Expected ${prop.name}, got ${args[propKey].constructor.name}`
                 )
               }
-            } else if (arg.constructor.name !== propType.name) {
-              throw new TypeError(
-                `Invalid prop: type check failed for prop "${propKey}". Expected ${propType?.name}, got ${arg.constructor.name}`
-              )
-            }
-
-            props = {
-              ...props,
-              [propKey]: arg,
             }
           }
         }
       })
-      if (Object.keys(composable.props).length > args.length) {
-        Object.keys(composable.props)
-          .slice(args.length)
-          .forEach((propKey, i) => {
-            const prop = getPropType(i)
-
-            // Check if the property has the required: true property
-            if (prop.required === true) {
-              throw new Error(`${propKey} is required but not provided.`)
-            } else if (isPropOptions(prop)) {
-              if (typeof prop.default == 'function') {
-                props = {
-                  ...props,
-                  [propKey]: prop.default(),
-                }
-              } else {
-                props = {
-                  ...props,
-                  [propKey]: prop.default,
-                }
-              }
-            }
-          })
-      }
     }
+
     if (composable.data) {
       if (isFunction(composable.data)) {
         const dataObject = (composable.data as Function)()

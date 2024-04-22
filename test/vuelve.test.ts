@@ -22,7 +22,9 @@ describe('vuelve', () => {
         title: String,
       },
       setup(props) {
-        const { titleWithCount } = composable(props.title)
+        const { titleWithCount } = composable({
+          title: props.title,
+        })
         return { titleWithCount }
       },
       template: '<div>{{ titleWithCount }}</div>',
@@ -221,9 +223,11 @@ describe('vuelve', () => {
       },
     })
 
-    expect(() => composable(1)).toThrow(
-      new TypeError('Invalid prop: type check failed for prop "title". Expected String, got Number')
-    )
+    expect(() =>
+      composable({
+        title: 1,
+      })
+    ).toThrow(new TypeError('Invalid prop: type check failed for prop "title". Expected String, got Number'))
   })
   it('throws an error when prop of incorrect type is provided', async () => {
     const composable = vuelve({
@@ -243,9 +247,11 @@ describe('vuelve', () => {
       },
     })
 
-    expect(() => composable(1)).toThrow(
-      new TypeError('Invalid prop: type check failed for prop "title". Expected String, got Number')
-    )
+    expect(() =>
+      composable({
+        title: 1,
+      })
+    ).toThrow(new TypeError('Invalid prop: type check failed for prop "title". Expected String, got Number'))
   })
 
   it('throws an error when required prop is not provided', async () => {
@@ -270,7 +276,11 @@ describe('vuelve', () => {
       },
     })
 
-    expect(() => composable('new title')).toThrow(new Error('description is required but not provided.'))
+    expect(() =>
+      composable({
+        title: 'new title',
+      })
+    ).toThrow(new Error('description is required but not provided.'))
   })
   it('successfully handles prop of correct type with dynamic value', async () => {
     const composable = vuelve({
@@ -294,7 +304,9 @@ describe('vuelve', () => {
         title: String,
       },
       setup(props) {
-        const { titleWithCount } = composable(props.title)
+        const { titleWithCount } = composable({
+          title: props.title,
+        })
         return { titleWithCount }
       },
       template: '<div>{{ titleWithCount }}</div>',
@@ -365,7 +377,9 @@ describe('vuelve', () => {
         title: String,
       },
       setup(props) {
-        const { titleWithCount } = composable(props.title)
+        const { titleWithCount } = composable({
+          title: props.title,
+        })
         return { titleWithCount }
       },
       template: '<div>{{ titleWithCount }}</div>',

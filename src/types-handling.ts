@@ -46,7 +46,7 @@ export type ComposableContext<Props, Data, Computed, Methods, Args> = (Props ext
     readonly [K in keyof Methods]: Methods[K]
   } &
   {
-    readonly [K in keyof Data]: Ref<UnwrapRef<Data[K]>>
+    readonly [K in keyof Data]: Data[K] extends object ? Data[K] : Ref<UnwrapRef<Data[K]>>
   } &
   { readonly [K in keyof Computed]: ComputedRef<Computed[K]> }
 
@@ -155,7 +155,7 @@ export type ComposableObjectProps<
  * Returns the type of the return value of a vuelve function
  */
 export type ComposableReturn<Data, Computed, Methods, Args> = {
-  [K in keyof Data]: Ref<UnwrapRef<Data[K]>>
+  [K in keyof Data]: Data[K] extends object ? Data[K] : Ref<UnwrapRef<Data[K]>>
 } &
   {
     [K in keyof Computed]: Ref<UnwrapRef<Computed[K]>>

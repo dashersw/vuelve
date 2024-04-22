@@ -393,4 +393,38 @@ describe('vuelve', () => {
 
     expect(wrapper.text()).toContain('Count: 0')
   })
+
+  it('handles object data value correctly', async () => {
+    const composable = vuelve({
+      data() {
+        return {
+          count: {
+            title: 'Count:',
+            value: 0,
+          },
+        }
+      },
+      methods: {
+        increment() {
+          this.count.value += 1
+        },
+      },
+    })
+
+    const component = defineComponent({
+      setup() {
+        const { count, increment } = composable()
+        return { count, increment } as Record<string, any>
+      },
+      template: '<div>{{ count.title }} {{ count.value }} <button @click="increment"></button></div>',
+    })
+
+    const wrapper = mount(component)
+
+    wrapper.find('button').trigger('click')
+
+    await nextTick()
+
+    expect(wrapper.text()).toContain('Count: 1')
+  })
 })

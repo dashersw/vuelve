@@ -12,6 +12,7 @@ import {
   ComputedOptions,
   ComponentObjectPropsOptions,
   Ref,
+  reactive,
 } from 'vue'
 import cloneDeep from 'lodash.clonedeep'
 import { isArray, isFunction, isPropOptions } from './utils.ts'
@@ -94,7 +95,7 @@ function vuelve<
 >(composable: Composable<PropNames, Props, Data, Computed, Methods, Args>) {
   return function setup(args?: Args) {
     const props = {} as Record<string, Ref<any> | undefined>
-    const data = {} as Record<string, Ref<any>>
+    const data = {} as Record<string, Ref<any>> | Record<string, any>
     const methods = {} as Record<string, Function>
     const computeds = {} as Record<string, ComputedRef<any>>
 
@@ -183,7 +184,14 @@ function vuelve<
         const dataObject = (composable.data as Function)()
 
         Object.entries(dataObject).forEach(([key, value]) => {
-          const refValue = ref(cloneDeep(value))
+          let refValue: Ref<any> | object
+
+          if (typeof value === 'object' && value !== null) {
+            refValue = reactive(value)
+          } else {
+            refValue = ref(cloneDeep(value))
+          }
+
           data[key] = refValue
         })
       }

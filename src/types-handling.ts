@@ -35,7 +35,7 @@ export type ComposableContext<Props, Data, Computed, Methods, Args> = (Props ext
      * ["title"] -> { title: ArgType | any }
      */
     {
-      readonly [P in Props[number]]: Args extends { [K in keyof Props[number]]: infer ArgType } ? ArgType : any
+      readonly [P in Props]: Args extends { [K in keyof Props]: infer ArgType } ? ArgType : any
     }
   : /**
      * { title: Number } -> { title: Number | undefined }

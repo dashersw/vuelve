@@ -1,50 +1,91 @@
-import { ref as h, watch as s, watchEffect as p, computed as v, onMounted as E, onBeforeUpdate as m, onUpdated as j, onBeforeUnmount as O, onUnmounted as g, onErrorCaptured as w, onRenderTracked as U, onRenderTriggered as y, onActivated as T, onDeactivated as b, onServerPrefetch as k } from "vue";
-import C from "lodash.clonedeep";
-const x = {
-  mounted: E,
-  beforeUpdate: m,
+import { onMounted as w, onBeforeUpdate as y, onUpdated as j, onBeforeUnmount as m, onUnmounted as O, onErrorCaptured as k, onRenderTracked as l, onRenderTriggered as $, onActivated as b, onDeactivated as C, onServerPrefetch as T, reactive as U, ref as v, watch as A, watchEffect as F, computed as q } from "vue";
+import x from "lodash.clonedeep";
+const h = (t) => typeof t == "function", P = (t) => Array.isArray(t);
+function p(t) {
+  return typeof t == "object" && (t.type === void 0 || typeof t.type == "function" || t.type === !0) && (t.required === void 0 || typeof t.required == "boolean") && (t.default === void 0 || typeof t.default == "function" || t.type !== !0 && typeof t.default === t.type.name.toLowerCase());
+}
+const D = {
+  mounted: w,
+  beforeUpdate: y,
   updated: j,
-  beforeUnmount: O,
-  unmounted: g,
-  errorCaptured: w,
-  renderTracked: U,
-  renderTriggered: y,
-  activated: T,
-  deactivated: b,
-  serverPrefetch: k
+  beforeUnmount: m,
+  unmounted: O,
+  errorCaptured: k,
+  renderTracked: l,
+  renderTriggered: $,
+  activated: b,
+  deactivated: C,
+  serverPrefetch: T
 };
-function H(t) {
-  return function(...a) {
-    const o = {}, f = {}, i = {}, c = {};
-    return a.forEach((e, n) => {
-      var d;
-      const r = (d = t.props) == null ? void 0 : d[n];
-      r && (o[r] = e);
-    }), t.data && Object.entries(t.data).forEach(([e, n]) => {
-      o[e] = h(C(n));
-    }), Object.assign(c, o), t.methods && Object.entries(t.methods).forEach(([e, n]) => {
-      f[e] = (...r) => n.apply(c, r);
-    }), Object.assign(c, f), Object.entries(x).forEach(([e, n]) => {
-      const r = e;
-      if (t[r]) {
-        const d = t[r];
-        n((...u) => d.apply(c, u));
+function L(t) {
+  return function(o) {
+    const d = {}, u = {}, a = {}, s = {}, i = {};
+    if (t.props) {
+      const c = P(t.props);
+      (c ? Object.values(t.props) : Object.keys(t.props)).forEach((e) => {
+        var f;
+        if (c)
+          o && o[e] && (d[e] = o[e]);
+        else {
+          const n = t.props[e];
+          if (p(n)) {
+            if (o && o[e]) {
+              if (!n.type || n.type === !0)
+                d[e] = o[e];
+              else if (typeof n.type == "function")
+                if (n.type.name === o[e].constructor.name)
+                  d[e] = o[e];
+                else
+                  throw new TypeError(
+                    `Invalid prop: type check failed for prop "${e}". Expected ${(f = n.type) == null ? void 0 : f.name}, got ${o[e].constructor.name}`
+                  );
+            } else if (n.default) {
+              const E = h(n.default) ? n.default() : n.default;
+              d[e] = E;
+            } else if (n.required)
+              throw new Error(`${e} is required but not provided.`);
+          }
+          if (!p(n) && o && o[e])
+            if (n.name === o[e].constructor.name)
+              d[e] = o[e];
+            else
+              throw new TypeError(
+                `Invalid prop: type check failed for prop "${e}". Expected ${n.name}, got ${o[e].constructor.name}`
+              );
+        }
+      });
+    }
+    if (t.data && h(t.data)) {
+      const c = t.data();
+      Object.entries(c).forEach(([r, e]) => {
+        let f;
+        typeof e == "object" && e !== null ? f = U(e) : f = v(x(e)), u[r] = f;
+      });
+    }
+    return Object.assign(i, u, d), t.methods && Object.entries(t.methods).forEach(([c, r]) => {
+      a[c] = r.bind(i);
+    }), Object.assign(i, a), Object.entries(D).forEach(([c, r]) => {
+      const e = c;
+      if (t[e]) {
+        const f = t[e];
+        r((...n) => f.apply(i, n));
       }
-    }), t.watch && Object.entries(t.watch).forEach(([e, n]) => {
-      o[e] && s(o[e], n.bind(c));
-    }), t.watchEffect && Object.values(t.watchEffect).forEach((e) => {
-      p(e.bind(c));
-    }), t.computed && Object.keys(t.computed).forEach((e) => {
-      var r;
-      const n = (r = t.computed) == null ? void 0 : r[e];
-      n && (i[e] = v(n.bind(c)));
+    }), t.watch && Object.entries(t.watch).forEach(([c, r]) => {
+      const e = r, f = i[c];
+      f && A(f, e.bind(i));
+    }), t.watchEffect && Object.values(t.watchEffect).forEach((c) => {
+      F(c.bind(i));
+    }), t.computed && Object.keys(t.computed).forEach((c) => {
+      const r = t.computed && t.computed[c];
+      r && (s[c] = q(r.bind(i)));
     }), {
-      ...o,
-      ...f,
-      ...i
+      ...d,
+      ...u,
+      ...a,
+      ...s
     };
   };
 }
 export {
-  H as default
+  L as default
 };
